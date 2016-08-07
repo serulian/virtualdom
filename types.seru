@@ -1,0 +1,42 @@
+/**
+ * FunctionReference is a well-typed reference to a function registered with an EventManager.
+ */
+type FunctionReference : string {}
+
+/**
+ * VirtualNode defines a single virtual DOM node.
+ */
+struct VirtualNode {
+	/**
+	 * TagName is the tag that this virtual node represents, if any. If specified,
+	 * Text must be null.
+	 */
+	TagName string?
+
+	/**
+	 * Attributes defines the various attributes for the node, if any.
+	 */
+	Attributes []{string}
+
+	/**
+	 * Key is the unique comparison key for the node, if any. If specified, the key will
+	 * be compared to the key on the existing DOM when diffing and, if a match is found,
+	 * the existing node will be used in place of the virtual node.
+	 */
+	Key string?
+
+	/**
+	 * Text is the textual contents of the node, if any. If specified, TagName be null.
+	 */
+	Text string?
+
+	/**
+	 * Children is the slice of children of this node, if any.
+	 */
+	Children []VirtualNode
+
+	/**
+	 * EventHandlers is a mapping of all event handlers to register on this node, if any.
+	 */
+	EventHandlers []{FunctionReference}
+}

@@ -1,0 +1,61 @@
+interface Node {
+	readonly attribute Number nodeType;
+
+	void appendChild(Node node);
+	void removeChild(Node node);
+	void replaceChild(Node node, Node child);
+	void insertBefore(Node node, Node? child);
+
+	readonly attribute NodeList childNodes;
+
+	readonly attribute Node? parentNode;
+	readonly attribute Node? firstChild;
+	readonly attribute Node? nextSibling;
+
+	getter any (String propertyName);
+	setter void (String propertyName, any value);
+};
+
+interface Event {
+  readonly attribute String type;
+  readonly attribute Element? target;
+
+  getter String (String propertyName);
+};
+
+interface NodeList {
+  getter Node? (Number index);
+  readonly attribute Number length;	
+};
+
+interface Element : Node {
+	readonly attribute String tagName;
+	attribute String id;
+	attribute String className;
+	String getAttribute(String name);
+	void setAttribute(String name, String value);
+	void removeAttribute(String name);
+	Boolean hasAttribute(String name);
+	Boolean matches(String selector);
+
+	readonly attribute Array attributes;
+
+	void addEventListener(String type, any listener, optional Boolean capture);
+	void removeEventListener(String type, any listener, optional Boolean capture);
+};
+
+interface Text : Node {
+	readonly attribute String wholeText;	
+};
+
+interface Document {
+  Element createElement(String localName);
+  Text createTextNode(String data);
+
+  Element getElementById(String elementId);
+};
+
+[Global]
+interface Window {
+   static readonly attribute Document document;
+};

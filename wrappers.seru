@@ -1,0 +1,153 @@
+from webidl`github.com/Serulian/corelib:master` import String as DOMString
+from webidl`dom` import Element, Event, Node, Text, document
+
+from types import VirtualNode
+
+/**
+ * DOMNode defines an abstract interface for working with a DOM node or VirtualNode.
+ */
+interface DOMNode {
+	property<bool> IsElement { get }
+
+	property<string> TagName { get }
+
+	property<string?> Key { get }
+
+	property<string?> TextData { get }
+
+	property<[]string> AttributeNames { get }
+
+	property<int> ChildCount { get }
+
+	function<DOMNode> GetChild(index int)
+
+	function<string?> GetAttribute(name string)
+}
+
+/**
+ * DOMError represents an error raised when trying to access data from the DOM.
+ */
+class DOMError {
+	var<string> message
+
+	constructor WithMessage(message string) { return DOMError{message: message} }
+
+	property<string> Message {
+		get  { return this.message }
+	}
+}
+
+/**
+ * NodeWrapper wraps a DOM node in the DOMNode interface for easier diffing.
+ */
+type NodeWrapper : Node {
+	constructor For(node Node) { return NodeWrapper(node) }
+
+	property<[]string> AttributeNames {
+		get  {
+			if !this.IsElement { return []string{} }
+
+			var attributes = Element(this).attributes
+			var names = list<string>.Empty()
+			for attr in slice<any>.ForArray(attributes) {
+				names.Add(string(attr->name.(DOMString)))
+			}
+
+			return names[0:]
+		}
+	}
+
+	property<string?> Key {
+		get  {
+			if !this.IsElement { return this.TextData }
+
+			return this.GetAttribute('data-key')
+		}
+	}
+
+	property<bool> IsElement {
+		get  { return int(Node(this).nodeType) == 1 }
+	}
+
+	property<string> TagName {
+		get  {
+			if !this.IsElement { return '' }
+			return string(Element(this).tagName).ToLowerCase()
+		}
+	}
+
+	property<string?> TextData {
+		get  {
+			if this.IsElement { return null }
+			return string(Text(this).wholeText)
+		}
+	}
+
+	property<int> ChildCount {
+		get  { return int(Element(this).childNodes.length) }
+	}
+
+	function<DOMNode> GetChild(index int) {
+		var child = Element(this).childNodes[&index]
+		if child is null { reject DOMError{message: 'Invalid child index'} }
+
+		return NodeWrapper(child!)
+	}
+
+	function<string?> GetAttribute(name string) {
+		if !this.IsElement {
+			reject DOMError{message: 'Cannot retrieve attribute for non-element'}
+		}
+
+		return string(Element(this).getAttribute(&name))
+	}
+}
+
+/**
+ * VirtualNodeWrapper wraps the VirtualNode type in the DOMNode interface.
+ */
+type VirtualNodeWrapper : VirtualNode {
+	constructor For(node VirtualNode) { return VirtualNodeWrapper(node) }
+
+	property<string?> Key {
+		get  {
+			if !this.IsElement { return this.TextData }
+
+			return VirtualNode(this).Key
+		}
+	}
+
+	property<[]string> AttributeNames {
+		get  { return VirtualNode(this).Attributes.Keys }
+	}
+
+	property<bool> IsElement {
+		get  { return !(VirtualNode(this).TagName is null) }
+	}
+
+	property<string> TagName {
+		get  { return VirtualNode(this).TagName ?? '' }
+	}
+
+	property<int> ChildCount {
+		get  { return VirtualNode(this).Children.Length }
+	}
+
+	property<string?> TextData {
+		get  { return VirtualNode(this).Text }
+	}
+
+	function<DOMNode> GetChild(index int) {
+		if index >= this.ChildCount { reject DOMError{message: 'Invalid child index'} }
+
+		return VirtualNodeWrapper(VirtualNode(this).Children[index])
+	}
+
+	function<string?> GetAttribute(name string) {
+		if !this.IsElement {
+			reject DOMError{message: 'Cannot retrieve attribute for non-element'}
+		}
+
+		return VirtualNode(this).Attributes[name]
+	}
+}

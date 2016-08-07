@@ -1,0 +1,15 @@
+from webidl`github.com/Serulian/corelib:master` import String as DOMString
+from webidl`dom` import Node
+
+var<string> elementInternalPath = "__internal_dom_path"
+
+function<string> GetDOMPath(node Node) {
+	var existingPath = node[&elementInternalPath]
+	if existingPath is null { return '(root)' }
+
+	return string(existingPath.(DOMString))
+}
+
+function<void> SetDOMPath(node Node, elementPath string) {
+	node[&elementInternalPath] = elementPath
+}

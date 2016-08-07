@@ -1,0 +1,331 @@
+from webidl`github.com/Serulian/corelib:master` import String as DOMString
+
+from "github.com/Serulian/corelib:master" import Map, List, Set
+
+from webidl`dom` import Element, Node, document
+
+from internal import GetDOMPath, SetDOMPath
+from types import VirtualNode, FunctionReference
+from wrappers import DOMNode, DOMError, VirtualNodeWrapper
+
+var<string> DIFF_REPLACE_NODE = 'replace-node'
+
+var<string> DIFF_REMOVE_NODE = 'remove-node'
+
+var<string> DIFF_CREATE_NODE = 'create-node'
+
+var<string> DIFF_THUNK = 'thunk'
+
+/**
+ * AttributeDiff defines the difference of an attribute being added or removed.
+ */
+struct AttributeDiff {
+	Name string
+	Value string?
+}
+
+/**
+ * Diff defines a diff along a virtual DOM tree.
+ */
+struct Diff {
+	/**
+	 * The type of diff. Must match one of the DIFF constants.
+	 */
+	Type string
+
+	/**
+	 * The index of this diff's starting node in the parent node.
+	 */
+	NodeIndex int
+	ReplacementNode VirtualNode?
+	Children []Diff
+	Attributes []AttributeDiff
+}
+
+var<int> nodeCounter = 0
+
+function<string> generateId() {
+	nodeCounter = nodeCounter + 1
+	return nodeCounter.String()
+}
+
+/**
+ * buildDOM constructs the real DOM tree for the given virtual DOM tree starting at the
+ * given node.
+ */
+function<Node> buildDOM(vNode VirtualNode, parentPath string) {
+	if vNode.TagName is null { return document.createTextNode(&(vNode.Text!)) }
+
+	var node = document.createElement(&(vNode.TagName!))
+	if vNode.Key is not null {
+		node.setAttribute(&"data-key", &(vNode.Key!))
+	}
+
+	for attrName in vNode.Attributes.Keys {
+		var attrValue = vNode.Attributes[attrName]
+		if attrValue is null {
+			continue
+		}
+
+		node.setAttribute(&attrName, &(attrValue!))
+	}
+
+	for child in vNode.Children {
+		node.appendChild(buildDOM(child))
+	}
+
+	var elementPath = parentPath + '.' + generateId()
+	SetDOMPath(node, elementPath)
+	return node
+}
+
+/**
+ * DiffReporter defines an interface invoked for each changed in a DOM tree when a diff
+ * is applied.
+ */
+interface DiffReporter {
+	function<void> NodeRemoved(domNode Node)
+
+	function<void> NodeCreated(virtualNode VirtualNode, domNode Node)
+
+	function<void> NodeUpdated(virtualNode VirtualNode, domNode Node)
+}
+
+/**
+ * ComputeDiff computes the difference between the updated Virtual DOM tree and the existing
+ * tree specified.
+ */
+function<Diff> ComputeDiff(updated VirtualNode, existing DOMNode) {
+	return computeDiff(updated, existing, -1)
+}
+
+/**
+ * ApplyDiff applies the given diff to the given DOM node, optional reportinig to the specified
+ * reporter.
+ */
+function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
+	switch diff.Type {
+		case DIFF_THUNK:
+			// Update any attributes.
+			for attrDiff in diff.Attributes {
+				if attrDiff.Value is null {
+					domNode.(Element).removeAttribute(&attrDiff.Name)
+				} else {
+					domNode.(Element).setAttribute(&attrDiff.Name, &(attrDiff.Value!))
+				}
+			}
+
+			// Report the update.
+			reporter?.NodeUpdated(diff.ReplacementNode!, domNode)
+
+			// Process child diffs.
+			for childDiff in diff.Children {
+				if childDiff.Type == DIFF_CREATE_NODE {
+					ApplyDiff(childDiff, domNode, reporter)
+					continue
+				}
+
+				var child = domNode.(Element).childNodes[&childDiff.NodeIndex]
+				if child is null { reject DOMError.WithMessage('Missing expected child') }
+
+				ApplyDiff(childDiff, child!, reporter)
+			}
+
+		case DIFF_REMOVE_NODE:
+			var parent = domNode.parentNode
+			if parent is not null {
+				parent.removeChild(domNode)
+				reporter?.NodeRemoved(domNode)
+			}
+
+		case DIFF_CREATE_NODE:
+			var parentPath = GetDOMPath(domNode)
+			var createdNode = buildDOM(diff.ReplacementNode!, parentPath)
+			var insertionBeforeIndex = diff.NodeIndex
+			if insertionBeforeIndex >= int(domNode.childNodes.length) {
+				domNode.appendChild(createdNode)
+				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
+				return
+			}
+
+			var existingChild = domNode.childNodes[&insertionBeforeIndex]
+			if existingChild is not null {
+				domNode.insertBefore(createdNode, existingChild)
+				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
+			}
+
+		case DIFF_REPLACE_NODE:
+			var parent = domNode.parentNode
+			if parent is not null {
+				var parentPath = GetDOMPath(domNode)
+				var createdNode = buildDOM(diff.ReplacementNode!)
+				parent.replaceChild(domNode, createdNode)
+
+				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
+				reporter?.NodeRemoved(domNode)
+			}
+	}
+}
+
+function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) {
+	var updated = VirtualNodeWrapper.For(updatedNode)
+
+	// Determine whether the existing node needs replacement. If the nodes have the same
+	// key, then we know replacement is not needed. On the other hand, if the nodes are
+	// of different kinds (element vs text) or tag names, then replacement is definitely
+	// needed.
+	var updatedKey = updated.Key ?? '---updating---'
+	var existingKey = existing.Key ?? '---existing--'
+
+	var needsReplacement = false
+	switch {
+		case updatedKey == existingKey:
+			// Thunk below.
+			needsReplacement = false
+
+		case updated.IsElement != existing.IsElement:
+			// Node is different. Replace.
+			needsReplacement = true
+
+		case existing.IsElement && updated.TagName != existing.TagName:
+			// Element is different. Replace.
+			needsReplacement = true
+
+		case !existing.IsElement:
+			// Compare by node text.
+			needsReplacement = updated.TextData ?? '' != existing.TextData ?? ''
+	}
+
+	// If the node needs replacement, nothing more to compute, as the replacement will be
+	// wholesale.
+	if needsReplacement {
+		return Diff{
+			Type: DIFF_REPLACE_NODE,
+			NodeIndex: parentIndex,
+			ReplacementNode: updatedNode,
+			Children: []Diff{},
+			Attributes: []AttributeDiff{},
+		}
+	}
+
+	// Perform diffing on the attributes of the nodes.
+	var attributeDiffs = list<AttributeDiff>.Empty()
+	if existing.IsElement {
+		var existingAttributes = Map<string, string?>.Empty()
+
+		for attributeName in existing.AttributeNames {
+			existingAttributes[attributeName] = existing.GetAttribute(attributeName)
+
+			if attributeName == "data-key" {
+				continue
+			}
+
+			if updated.GetAttribute(attributeName) is null {
+				attributeDiffs.Add(AttributeDiff{Name: attributeName})
+			}
+		}
+
+		for attributeName in updated.AttributeNames {
+			var attributeValue = updated.GetAttribute(attributeName)
+			var existingValue = existingAttributes[attributeName]
+
+			if attributeValue is null {
+				continue
+			}
+
+			if existingValue is null || attributeValue! != existingValue! {
+				attributeDiffs.Add(AttributeDiff{Name: attributeName, Value: attributeValue})
+			}
+		}
+	}
+
+	// Perform diffing on the children of the nodes.
+	var childInPlaceDiffs = list<Diff>.Empty()
+	var childRemovalDiffs = list<Diff>.Empty()
+	var childInsertionDiffs = list<Diff>.Empty()
+
+	var updatedByKey = Map<string, VirtualNode>.Empty()
+	var keysHandled = Map<string, Diff>.Empty()
+
+	// Find the keys of the updated node, to determine if we are inserting nodes
+	// in amongst the existing children.
+	for child in updatedNode.Children {
+		if !(child.Key is null) {
+			updatedByKey[child.Key!] = child
+		} else if child.TagName is null {
+			updatedByKey[child.Text ?? ''] = child
+		}
+	}
+
+	// Calculate the children from the existing node to remove or diff.
+	for counter in 0 .. existing.ChildCount - 1 {
+		var index = existing.ChildCount - 1 - counter
+		var child = existing.GetChild(index)
+		var childKey = child.Key
+		if childKey is null {
+			// Remove the child since it cannot possibly match.
+			childRemovalDiffs.Add(Diff{
+				Type: DIFF_REMOVE_NODE,
+				NodeIndex: index,
+				Children: []Diff{},
+				Attributes: []AttributeDiff{},
+			})
+			continue
+		}
+
+		// If the child's key exists in the map, then this is a nested diff.
+		var vNode = updatedByKey[childKey!]
+		if vNode is null {
+			// No matching node. Remove this one.
+			childRemovalDiffs.Add(Diff{
+				Type: DIFF_REMOVE_NODE,
+				NodeIndex: index,
+				Children: []Diff{},
+				Attributes: []AttributeDiff{},
+			})
+			continue
+		}
+
+		// We have a matching node, so add a nested diff.
+		keysHandled[childKey!] = computeDiff(vNode!, child, index)
+	}
+
+	// Build the diffs for the updated node.
+	for index in 0 .. updatedNode.Children.Length - 1 {
+		var child = updatedNode.Children[index]
+		var childKey = child.Key
+		if child.TagName is null {
+			childKey = child.Text
+		}
+
+		var addCreate = true
+
+		if childKey is not null {
+			var handledDiff = keysHandled[childKey]
+			if handledDiff is not null {
+				childInPlaceDiffs.Add(handledDiff)
+				addCreate = false
+			}
+		}
+
+		if addCreate {
+			childInsertionDiffs.Add(Diff{
+				Type: DIFF_CREATE_NODE,
+				NodeIndex: index,
+				ReplacementNode: child,
+				Children: []Diff{},
+				Attributes: []AttributeDiff{},
+			})
+		}
+	}
+
+	var childrenDiffs = list<Diff>.Concat(list<Diff>.Concat(childInPlaceDiffs, childRemovalDiffs), childInsertionDiffs)
+
+	return Diff{
+		Type: DIFF_THUNK,
+		NodeIndex: parentIndex,
+		Children: childrenDiffs[0:],
+		Attributes: attributeDiffs[0:],
+		ReplacementNode: updatedNode,
+	}
+}

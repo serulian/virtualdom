@@ -1,0 +1,155 @@
+from webidl`github.com/Serulian/corelib:master` import Function as NativeFunction
+
+from "github.com/Serulian/corelib:master" import Map, List, Set
+
+from webidl`dom` import Element, Node, Event
+
+from internal import GetDOMPath
+from types import VirtualNode, FunctionReference
+from wrappers import NodeWrapper
+
+/**
+ * EventManager defines a type for tracking and managing all events registered on a virtual
+ * DOM tree.
+ */
+class EventManager {
+	var<Element> element
+	var<Set<string>> registered = Set<string>.Empty()
+	var<int> functionRefCounter = 0
+	var<Map<string, any>> handlers = Map<string, any>.Empty()
+	var<eventTree> tree = eventTree.new()
+
+	/**
+	 * ForElement returns an EventManager rooted at the specified DOM element. All event handlers
+	 * will be registered on the specified element.
+	 */
+	constructor ForElement(element Element) { return EventManager{element: element} }
+
+	function<void> NodeRemoved(domNode Node) {
+		if !NodeWrapper(domNode).IsElement { return }
+
+		var path = GetDOMPath(domNode)
+		var split = path.Split('.')
+		this.tree.removeBranch(split)
+	}
+
+	function<void> NodeCreated(virtualNode VirtualNode, domNode Node) {
+		if virtualNode.EventHandlers.IsEmpty { return }
+
+		var path = GetDOMPath(domNode)
+		var split = path.Split('.')
+		var treeEntry = this.tree.getOrAddBranch(split)
+		treeEntry.clearHandlers()
+
+		for eventName in virtualNode.EventHandlers.Keys {
+			this.register(eventName)
+
+			var handlerRef = virtualNode.EventHandlers[eventName]
+			treeEntry.addHandler(eventName, handlerRef!)
+		}
+	}
+
+	function<void> NodeUpdated(virtualNode VirtualNode, domNode Node) {
+		var path = GetDOMPath(domNode)
+		var split = path.Split('.')
+		var treeEntry = this.tree.getOrAddBranch(split)
+		treeEntry.clearHandlers()
+
+		for eventName in virtualNode.EventHandlers.Keys {
+			this.register(eventName)
+
+			var handlerRef = virtualNode.EventHandlers[eventName]
+			treeEntry.addHandler(eventName, handlerRef!)
+		}
+	}
+
+	function<FunctionReference> RegisterFunction(func function<void>()) {
+		var ref = this.functionRefCounter.String()
+		this.handlers[ref] = func
+		this.functionRefCounter = this.functionRefCounter + 1
+		return FunctionReference(ref)
+	}
+
+	function<void> handleEvent(evt Event) {
+		var target = evt.target
+		if target is null { return }
+
+		// Find the entry in the tree for the target's path.
+		var path = GetDOMPath(target!)
+		var split = path.Split('.')
+		var treeEntry = this.tree.getBranch(split)
+		if treeEntry is null { return }
+
+		var handler = (treeEntry!).lookupHandler(string(evt[&'type']))
+		if handler is null { return }
+
+		var handlerFunc = this.handlers[string(handler!)]
+		if handlerFunc is null { return }
+
+		handlerFunc.(NativeFunction).call(null)
+	}
+
+	function<void> register(eventName string) {
+		if this.registered.Add(eventName) {
+			this.element.addEventListener(&eventName, function<void>(evt Event) {
+				this.handleEvent(evt)
+			})
+		}
+	}
+}
+
+/**
+ * eventTree represents a single level of an event tree for propagation of events.
+ */
+class eventTree {
+	var<Map<string, eventTree>> children = Map<string, eventTree>.Empty()
+	var<Map<string, FunctionReference>> handlers = Map<string, FunctionReference>.Empty()
+
+	function<void> removeBranch(parts []string) {
+		if parts.Length == 1 {
+			this.children.RemoveKey(parts[0])
+			return
+		}
+
+		var child = this.children[parts[0]]
+		if child is null { return }
+
+		(child!).removeBranch(parts[1:])
+	}
+
+	function<eventTree> getOrAddBranch(parts []string) {
+		if parts.Length == 0 { return this }
+
+		var child = this.children[parts[0]]
+		if child is null {
+			var newBranch = eventTree.new()
+			var index = parts[0]
+
+			this.children[index] = newBranch
+			return newBranch.getOrAddBranch(parts[1:])
+		}
+
+		return (child!).getOrAddBranch(parts[1:])
+	}
+
+	function<eventTree?> getBranch(parts []string) {
+		if parts.Length == 0 { return this }
+
+		var child = this.children[parts[0]]
+		if child is null { return null }
+
+		return (child!).getBranch(parts[1:])
+	}
+
+	function<void> clearHandlers() {
+		this.handlers = Map<string, FunctionReference>.Empty()
+	}
+
+	function<void> addHandler(eventName string, funcRef FunctionReference) {
+		this.handlers[eventName] = funcRef
+	}
+
+	function<FunctionReference?> lookupHandler(eventName string) {
+		return this.handlers[eventName]
+	}
+}
