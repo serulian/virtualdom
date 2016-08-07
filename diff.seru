@@ -167,6 +167,22 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 	}
 }
 
+/**
+ * getInferredNodeKey returns the comparison key for the given node found at the given
+ * index. If the node has a defined key, it is used. If it is text node, then its text
+ * is used. Otherwise, a key is inferred based on the tag name and the element's location
+ * under its parent element.
+ */
+function<string> getInferredNodeKey(node DOMNode, index int) {
+	if node.Key is not null {
+		return node.Key!
+	} else if node.IsElement {
+		return node.TagName + ':' + index.String()
+	} else {
+		return node.TextData!
+	}
+}
+
 function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) {
 	var updated = VirtualNodeWrapper.For(updatedNode)
 
@@ -249,32 +265,20 @@ function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentInde
 
 	// Find the keys of the updated node, to determine if we are inserting nodes
 	// in amongst the existing children.
+	var index = 0
 	for child in updatedNode.Children {
-		if child.Key is not null {
-			updatedByKey[child.Key!] = child
-		} else if child.TagName is null {
-			updatedByKey[child.Text!] = child
-		}
+		updatedByKey[getInferredNodeKey(VirtualNodeWrapper.For(child), index)] = child
+		index = index + 1
 	}
 
 	// Calculate the children from the existing node to remove or diff.
 	for counter in 0 .. existing.ChildCount - 1 {
 		var index = existing.ChildCount - 1 - counter
 		var child = existing.GetChild(index)
-		var childKey = child.Key
-		if childKey is null {
-			// Remove the child since it cannot possibly match.
-			childRemovalDiffs.Add(Diff{
-				Type: DIFF_REMOVE_NODE,
-				NodeIndex: index,
-				Children: []Diff{},
-				Attributes: []AttributeDiff{},
-			})
-			continue
-		}
+		var childKey = getInferredNodeKey(child, index)
 
 		// If the child's key exists in the map, then this is a nested diff.
-		var vNode = updatedByKey[childKey!]
+		var vNode = updatedByKey[childKey]
 		if vNode is null {
 			// No matching node. Remove this one.
 			childRemovalDiffs.Add(Diff{
@@ -287,25 +291,19 @@ function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentInde
 		}
 
 		// We have a matching node, so add a nested diff.
-		keysHandled[childKey!] = computeDiff(vNode!, child, index)
+		keysHandled[childKey] = computeDiff(vNode!, child, index)
 	}
 
 	// Build the diffs for the updated node.
 	for index in 0 .. updatedNode.Children.Length - 1 {
 		var child = updatedNode.Children[index]
-		var childKey = child.Key
-		if child.TagName is null {
-			childKey = child.Text
-		}
-
+		var childKey = getInferredNodeKey(VirtualNodeWrapper.For(child), index)
 		var addCreate = true
 
-		if childKey is not null {
-			var handledDiff = keysHandled[childKey]
-			if handledDiff is not null {
-				childInPlaceDiffs.Add(handledDiff)
-				addCreate = false
-			}
+		var handledDiff = keysHandled[childKey]
+		if handledDiff is not null {
+			childInPlaceDiffs.Add(handledDiff)
+			addCreate = false
 		}
 
 		if addCreate {

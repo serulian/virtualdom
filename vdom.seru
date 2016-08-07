@@ -8,7 +8,11 @@ function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children a
 	var attributes = Map<string, string>.Empty()
 	var eventHandlers = Map<string, FunctionReference>.Empty()
 
-	var key = props["Key"].(string)
+	var<string?> key = null
+	if props["Key"] is not null {
+		key = props["Key"].(string)
+	}
+
 	for name in props.Keys {
 		if name.HasPrefix("on") {
 			eventHandlers[name[2:]] = props[name].(FunctionReference)
