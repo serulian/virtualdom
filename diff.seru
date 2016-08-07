@@ -250,10 +250,10 @@ function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentInde
 	// Find the keys of the updated node, to determine if we are inserting nodes
 	// in amongst the existing children.
 	for child in updatedNode.Children {
-		if !(child.Key is null) {
+		if child.Key is not null {
 			updatedByKey[child.Key!] = child
 		} else if child.TagName is null {
-			updatedByKey[child.Text ?? ''] = child
+			updatedByKey[child.Text!] = child
 		}
 	}
 

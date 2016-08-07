@@ -16,7 +16,7 @@ function<void> updateDom(em EventManager, message string, src string) {
 	// Create the DOM.
 	var newDom = <Div Key="rootElement" id="rootElement" onclick={onClick}>
 		<Img Key="icon" src={src} />
-		{{ message }}
+		{ message }
 	</Div>
 
 	// Compute a diff against the current DOM tree.

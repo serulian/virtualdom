@@ -19,6 +19,12 @@ function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children a
 
 	var childList = List<VirtualNode>.Empty()
 	for child in children {
+		// We skip null children, as they are the result of decorators deciding
+		// not to add the child.
+		if child is null {
+			continue
+		}
+
 		stringValue, _ := child.(string)
 		if stringValue is not null {
 			childList.Add(VirtualNode{

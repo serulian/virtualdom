@@ -1,0 +1,14 @@
+from types import VirtualNode
+
+/**
+ * Decorates a VirtualNode to only be added to the tree if the condition is met.
+ *
+ * Usage: <Div @If={some boolean condition}>...</Div>
+ */
+function<VirtualNode?> If(node VirtualNode, condition bool) {
+	if condition {
+		return node
+	}
+
+	return null
+}
