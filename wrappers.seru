@@ -118,7 +118,9 @@ type VirtualNodeWrapper : VirtualNode {
 	}
 
 	property<[]string> AttributeNames {
-		get  { return VirtualNode(this).Attributes.Keys }
+		get  {
+			return VirtualNode(this).Attributes?.Keys ?? []string{}
+		}
 	}
 
 	property<bool> IsElement {
@@ -130,7 +132,7 @@ type VirtualNodeWrapper : VirtualNode {
 	}
 
 	property<int> ChildCount {
-		get  { return VirtualNode(this).Children.Length }
+		get  { return VirtualNode(this).Children?.Length ?? 0 }
 	}
 
 	property<string?> TextData {
@@ -140,7 +142,8 @@ type VirtualNodeWrapper : VirtualNode {
 	function<DOMNode> GetChild(index int) {
 		if index >= this.ChildCount { reject DOMError{message: 'Invalid child index'} }
 
-		return VirtualNodeWrapper(VirtualNode(this).Children[index])
+		children := VirtualNode(this).Children
+		return VirtualNodeWrapper((children!)[index])
 	}
 
 	function<string?> GetAttribute(name string) {
@@ -148,6 +151,11 @@ type VirtualNodeWrapper : VirtualNode {
 			reject DOMError{message: 'Cannot retrieve attribute for non-element'}
 		}
 
-		return VirtualNode(this).Attributes[name]
+		attributes := VirtualNode(this).Attributes
+		if attributes is not null {
+			return attributes[name]
+		} else {
+			return null
+		}
 	}
 }

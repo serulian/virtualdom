@@ -16,7 +16,7 @@ struct VirtualNode {
 	/**
 	 * Attributes defines the various attributes for the node, if any.
 	 */
-	Attributes []{string}
+	Attributes ?[]{string}
 
 	/**
 	 * Key is the unique comparison key for the node, if any. If specified, the key will
@@ -33,10 +33,10 @@ struct VirtualNode {
 	/**
 	 * Children is the slice of children of this node, if any.
 	 */
-	Children []VirtualNode
+	Children ?[]VirtualNode
 
 	/**
 	 * EventHandlers is a mapping of all event handlers to register on this node, if any.
 	 */
-	EventHandlers []{FunctionReference}
+	EventHandlers ?[]{FunctionReference}
 }

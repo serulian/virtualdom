@@ -34,18 +34,21 @@ class EventManager {
 	}
 
 	function<void> NodeCreated(virtualNode VirtualNode, domNode Node) {
-		if virtualNode.EventHandlers.IsEmpty { return }
+		var eventHandlers = virtualNode.EventHandlers
+		if eventHandlers is not null {
+			if eventHandlers.IsEmpty { return }
 
-		var path = GetDOMPath(domNode)
-		var split = path.Split('.')
-		var treeEntry = this.tree.getOrAddBranch(split)
-		treeEntry.clearHandlers()
+			var path = GetDOMPath(domNode)
+			var split = path.Split('.')
+			var treeEntry = this.tree.getOrAddBranch(split)
+			treeEntry.clearHandlers()
 
-		for eventName in virtualNode.EventHandlers.Keys {
-			this.register(eventName)
+			for eventName in eventHandlers.Keys {
+				this.register(eventName)
 
-			var handlerRef = virtualNode.EventHandlers[eventName]
-			treeEntry.addHandler(eventName, handlerRef!)
+				var handlerRef = eventHandlers[eventName]
+				treeEntry.addHandler(eventName, handlerRef!)
+			}
 		}
 	}
 
@@ -55,11 +58,14 @@ class EventManager {
 		var treeEntry = this.tree.getOrAddBranch(split)
 		treeEntry.clearHandlers()
 
-		for eventName in virtualNode.EventHandlers.Keys {
-			this.register(eventName)
+		var eventHandlers = virtualNode.EventHandlers
+		if eventHandlers is not null {
+			for eventName in eventHandlers.Keys {
+				this.register(eventName)
 
-			var handlerRef = virtualNode.EventHandlers[eventName]
-			treeEntry.addHandler(eventName, handlerRef!)
+				var handlerRef = eventHandlers[eventName]
+				treeEntry.addHandler(eventName, handlerRef!)
+			}
 		}
 	}
 
