@@ -1,0 +1,14 @@
+from types import VirtualNode
+
+struct stylesheetProps {}
+
+/**
+ * Stylesheet returns a node for adding a stylesheet to the DOM.
+ */
+function<VirtualNode> Stylesheet(props stylesheetProps, definition string) {
+	return VirtualNode{
+		TagName: 'style',
+		Attributes: []{string}{"type": "text/css"},
+		Children: []VirtualNode{VirtualNode{Text: definition}},
+	}
+}

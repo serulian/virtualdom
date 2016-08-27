@@ -1,6 +1,6 @@
 from "github.com/Serulian/corelib:master" import Map, List
-from types import VirtualNode, FunctionReference, Renderable
 from "github.com/Serulian/corelib:master" import SimpleError
+from types import VirtualNode, FunctionReference, Renderable
 
 /**
  * BuildVirtualNode builds a new virtual DOM node with the given tag name, attributes and children.
@@ -19,7 +19,11 @@ function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children a
 			if name.HasPrefix("on") {
 				eventHandlers[name[2:]] = props[name].(FunctionReference)
 			} else if name != "Key" {
-				attributes[name] = props[name].(string)
+				if name == "className" {
+					attributes['class'] = props[name].(string)
+				} else {
+					attributes[name] = props[name].(string)
+				}
 			}
 		}
 	}
@@ -34,9 +38,7 @@ function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children a
 
 		match child as typedChild {
 			case string:
-				childList.Add(VirtualNode{
-					Text: typedChild,
-				})
+				childList.Add(VirtualNode{Text: typedChild})
 
 			case VirtualNode:
 				childList.Add(typedChild)
@@ -72,4 +74,8 @@ function<VirtualNode> Select(props []{any}, childStream any*) {
 
 function<VirtualNode> Option(props []{any}, childStream any*) {
 	return BuildVirtualNode('option', props, childStream)
+}
+
+function<VirtualNode> Style(props []{any}, childStream any*) {
+	return BuildVirtualNode('style', props, childStream)
 }
