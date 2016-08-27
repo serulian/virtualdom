@@ -1,5 +1,6 @@
 from "github.com/Serulian/corelib:master" import Map, List
-from types import VirtualNode, FunctionReference
+from types import VirtualNode, FunctionReference, Renderable
+from "github.com/Serulian/corelib:master" import SimpleError
 
 /**
  * BuildVirtualNode builds a new virtual DOM node with the given tag name, attributes and children.
@@ -31,18 +32,21 @@ function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children a
 			continue
 		}
 
-		stringValue, _ := child.(string)
-		if stringValue is not null {
-			childList.Add(VirtualNode{
-				Text: stringValue,
-				EventHandlers: []{FunctionReference}{},
-				Attributes: []{string}{},
-				Children: []VirtualNode{},
-			})
-			continue
-		}
+		match child as typedChild {
+			case string:
+				childList.Add(VirtualNode{
+					Text: typedChild,
+				})
 
-		childList.Add(child.(VirtualNode))
+			case VirtualNode:
+				childList.Add(typedChild)
+
+			case Renderable:
+				childList.Add(typedChild.Render())
+
+			default:
+				reject SimpleError.WithMessage('Unsupported instance under VirtualNode. Did you forget to add a Render() method?')
+		}
 	}
 
 	return VirtualNode{

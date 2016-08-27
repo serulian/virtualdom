@@ -46,3 +46,13 @@ struct VirtualNode {
 	 */
 	DOMNodeInserted FunctionReference?
 }
+
+/**
+ * Renderable marks an instance as being renderable into a VirtualNode.
+ */
+interface Renderable {
+	/**
+	 * Called to render the instance into a VirtualNode.
+	 */
+	function<VirtualNode> Render()
+}
