@@ -39,4 +39,10 @@ struct VirtualNode {
 	 * EventHandlers is a mapping of all event handlers to register on this node, if any.
 	 */
 	EventHandlers ?[]{FunctionReference}
+
+	/**
+	 * DOMNodeInserted is a function invoked by the event manager if/when the node is
+	 * created under the parent node.
+	 */
+	DOMNodeInserted FunctionReference?
 }

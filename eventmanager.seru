@@ -34,7 +34,7 @@ class EventManager {
 	}
 
 	function<void> NodeCreated(virtualNode VirtualNode, domNode Node) {
-		var eventHandlers = virtualNode.EventHandlers
+		eventHandlers := virtualNode.EventHandlers
 		if eventHandlers is not null {
 			if eventHandlers.IsEmpty { return }
 
@@ -50,6 +50,11 @@ class EventManager {
 				treeEntry.addHandler(eventName, handlerRef!)
 			}
 		}
+
+		insertedCallback := virtualNode.DOMNodeInserted
+		if insertedCallback is not null {
+			this.invokeHandler(insertedCallback, domNode)
+		}
 	}
 
 	function<void> NodeUpdated(virtualNode VirtualNode, domNode Node) {
@@ -58,7 +63,7 @@ class EventManager {
 		var treeEntry = this.tree.getOrAddBranch(split)
 		treeEntry.clearHandlers()
 
-		var eventHandlers = virtualNode.EventHandlers
+		eventHandlers := virtualNode.EventHandlers
 		if eventHandlers is not null {
 			for eventName in eventHandlers.Keys {
 				this.register(eventName)
@@ -69,7 +74,7 @@ class EventManager {
 		}
 	}
 
-	function<FunctionReference> RegisterFunction(func function<void>()) {
+	function<FunctionReference> RegisterFunction(func function<void>(any)) {
 		var ref = this.functionRefCounter.String()
 		this.handlers[ref] = func
 		this.functionRefCounter = this.functionRefCounter + 1
@@ -87,12 +92,16 @@ class EventManager {
 		if treeEntry is null { return }
 
 		var handler = (treeEntry!).lookupHandler(string(evt[&'type']))
-		if handler is null { return }
+		if handler is not null {
+			this.invokeHandler(handler, evt)
+		}
+	}
 
-		var handlerFunc = this.handlers[string(handler!)]
-		if handlerFunc is null { return }
-
-		handlerFunc.(NativeFunction).call(null)
+	function<void> invokeHandler(handler FunctionReference, param any) {
+		var handlerFunc = this.handlers[string(handler)]
+		if handlerFunc is not null {
+			handlerFunc.(NativeFunction).call(param)
+		}
 	}
 
 	function<void> register(eventName string) {
