@@ -6,9 +6,7 @@ from types import VirtualNode
  * Usage: <Div @If={some boolean condition}>...</Div>
  */
 function<VirtualNode?> If(node VirtualNode, condition bool) {
-	if condition {
-		return node
-	}
+	if condition { return node }
 
 	return null
 }

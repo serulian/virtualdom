@@ -8,7 +8,7 @@ function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children a
 	var attributes = Map<string, string>.Empty()
 	var eventHandlers = Map<string, FunctionReference>.Empty()
 	var<string?> key = null
-	
+
 	if !props.IsEmpty {
 		if props["Key"] is not null {
 			key = props["Key"].(string)

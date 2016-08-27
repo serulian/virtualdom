@@ -118,9 +118,7 @@ type VirtualNodeWrapper : VirtualNode {
 	}
 
 	property<[]string> AttributeNames {
-		get  {
-			return VirtualNode(this).Attributes?.Keys ?? []string{}
-		}
+		get  { return VirtualNode(this).Attributes?.Keys ?? []string{} }
 	}
 
 	property<bool> IsElement {
@@ -152,10 +150,6 @@ type VirtualNodeWrapper : VirtualNode {
 		}
 
 		attributes := VirtualNode(this).Attributes
-		if attributes is not null {
-			return attributes[name]
-		} else {
-			return null
-		}
+		if attributes is not null { return attributes[name] } else { return null }
 	}
 }

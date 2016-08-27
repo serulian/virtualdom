@@ -180,13 +180,9 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
  * under its parent element.
  */
 function<string> getInferredNodeKey(node DOMNode, index int) {
-	if node.Key is not null {
-		return node.Key!
-	} else if node.IsElement {
+	if node.Key is not null { return node.Key! } else if node.IsElement {
 		return node.TagName + ':' + index.String()
-	} else {
-		return node.TextData!
-	}
+	} else { return node.TextData! }
 }
 
 function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) {
