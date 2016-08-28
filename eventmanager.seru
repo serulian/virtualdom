@@ -4,7 +4,7 @@ from "github.com/Serulian/corelib:master" import Map, List, Set
 
 from webidl`dom` import Element, Node, Event
 
-from internal import GetDOMPath
+from internal import getDOMPath
 from types import VirtualNode, FunctionReference
 from wrappers import NodeWrapper
 
@@ -16,7 +16,7 @@ class EventManager {
 	var<Element> element
 	var<Set<string>> registered = Set<string>.Empty()
 	var<int> functionRefCounter = 0
-	var<Map<string, any>> handlers = Map<string, any>.Empty()
+	var<Map<string, function<void>(any)>> handlers = Map<string, function<void>(any)>.Empty()
 	var<eventTree> tree = eventTree.new()
 
 	/**
@@ -28,17 +28,22 @@ class EventManager {
 	function<void> NodeRemoved(domNode Node) {
 		if !NodeWrapper(domNode).IsElement { return }
 
-		var path = GetDOMPath(domNode)
+		var path = getDOMPath(domNode)
 		var split = path.Split('.')
 		this.tree.removeBranch(split)
 	}
 
 	function<void> NodeCreated(virtualNode VirtualNode, domNode Node) {
+		insertedCallback := virtualNode.DOMNodeInserted
+		if insertedCallback is not null {
+			this.invokeHandler(insertedCallback, domNode)
+		}
+
 		eventHandlers := virtualNode.EventHandlers
 		if eventHandlers is not null {
 			if eventHandlers.IsEmpty { return }
 
-			var path = GetDOMPath(domNode)
+			var path = getDOMPath(domNode)
 			var split = path.Split('.')
 			var treeEntry = this.tree.getOrAddBranch(split)
 			treeEntry.clearHandlers()
@@ -50,15 +55,10 @@ class EventManager {
 				treeEntry.addHandler(eventName, handlerRef!)
 			}
 		}
-
-		insertedCallback := virtualNode.DOMNodeInserted
-		if insertedCallback is not null {
-			this.invokeHandler(insertedCallback, domNode)
-		}
 	}
 
 	function<void> NodeUpdated(virtualNode VirtualNode, domNode Node) {
-		var path = GetDOMPath(domNode)
+		var path = getDOMPath(domNode)
 		var split = path.Split('.')
 		var treeEntry = this.tree.getOrAddBranch(split)
 		treeEntry.clearHandlers()
@@ -86,7 +86,7 @@ class EventManager {
 		if target is null { return }
 
 		// Find the entry in the tree for the target's path.
-		var path = GetDOMPath(target!)
+		var path = getDOMPath(target!)
 		var split = path.Split('.')
 		var treeEntry = this.tree.getBranch(split)
 		if treeEntry is null { return }
@@ -100,7 +100,7 @@ class EventManager {
 	function<void> invokeHandler(handler FunctionReference, param any) {
 		var handlerFunc = this.handlers[string(handler)]
 		if handlerFunc is not null {
-			handlerFunc.(NativeFunction).call(param)
+			handlerFunc(param)
 		}
 	}
 

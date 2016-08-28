@@ -4,7 +4,7 @@ from "github.com/Serulian/corelib:master" import Map, List, Set
 
 from webidl`dom` import Element, Node, document
 
-from internal import GetDOMPath, SetDOMPath
+from internal import getDOMPath, setDOMPath
 from types import VirtualNode, FunctionReference
 from wrappers import DOMNode, DOMError, VirtualNodeWrapper
 
@@ -81,7 +81,7 @@ function<Node> buildDOM(vNode VirtualNode, parentPath string) {
 	}
 
 	var elementPath = parentPath + '.' + generateId()
-	SetDOMPath(node, elementPath)
+	setDOMPath(node, elementPath)
 	return node
 }
 
@@ -145,7 +145,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			}
 
 		case DIFF_CREATE_NODE:
-			var parentPath = GetDOMPath(domNode)
+			var parentPath = getDOMPath(domNode)
 			var createdNode = buildDOM(diff.ReplacementNode!, parentPath)
 			var insertionBeforeIndex = diff.NodeIndex
 			if insertionBeforeIndex >= int(domNode.childNodes.length) {
@@ -163,7 +163,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 		case DIFF_REPLACE_NODE:
 			var parent = domNode.parentNode
 			if parent is not null {
-				var parentPath = GetDOMPath(domNode)
+				var parentPath = getDOMPath(domNode)
 				var createdNode = buildDOM(diff.ReplacementNode!)
 				parent.replaceChild(domNode, createdNode)
 
@@ -180,13 +180,9 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
  * under its parent element.
  */
 function<string> getInferredNodeKey(node DOMNode, index int) {
-	if node.Key is not null {
-		return node.Key!
-	} else if node.IsElement {
+	if node.Key is not null { return node.Key! } else if node.IsElement {
 		return node.TagName + ':' + index.String()
-	} else {
-		return node.TextData!
-	}
+	} else { return node.TextData! }
 }
 
 function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) {
