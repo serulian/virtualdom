@@ -1,0 +1,15 @@
+from webidl`dom` import Node
+
+from component import Reducible, Context, Reduce
+from diff import ComputeDiff, ApplyDiff
+from wrappers import NodeWrapper
+
+/**
+ * Render renders the specified component to the given DOM node, automatically performing
+ * the diff and apply.
+ */
+function<void> Render(component Reducible, context Context, node Node) {
+	rendered := Reduce(component, context)
+	var diff = ComputeDiff(rendered, NodeWrapper.For(node))
+	ApplyDiff(diff, node, context.EventManager)
+}

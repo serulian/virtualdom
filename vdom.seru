@@ -1,81 +1,21 @@
-from "github.com/Serulian/corelib:master" import Map, List
-from "github.com/Serulian/corelib:master" import SimpleError
-from types import VirtualNode, FunctionReference, Renderable
+from component import renderableVirtualNode
 
-/**
- * BuildVirtualNode builds a new virtual DOM node with the given tag name, attributes and children.
- */
-function<VirtualNode> BuildVirtualNode(tagName string, props []{any}, children any*) {
-	var attributes = Map<string, string>.Empty()
-	var eventHandlers = Map<string, FunctionReference>.Empty()
-	var<string?> key = null
-
-	if !props.IsEmpty {
-		if props["Key"] is not null {
-			key = props["Key"].(string)
-		}
-
-		for name in props.Keys {
-			if name.HasPrefix("on") {
-				eventHandlers[name[2:]] = props[name].(FunctionReference)
-			} else if name != "Key" {
-				if name == "className" {
-					attributes['class'] = props[name].(string)
-				} else {
-					attributes[name] = props[name].(string)
-				}
-			}
-		}
-	}
-
-	var childList = List<VirtualNode>.Empty()
-	for child in children {
-		// We skip null children, as they are the result of decorators deciding
-		// not to add the child.
-		if child is null {
-			continue
-		}
-
-		match child as typedChild {
-			case string:
-				childList.Add(VirtualNode{Text: typedChild})
-
-			case VirtualNode:
-				childList.Add(typedChild)
-
-			case Renderable:
-				childList.Add(typedChild.Render())
-
-			default:
-				reject SimpleError.WithMessage('Unsupported instance under VirtualNode. Did you forget to add a Render() method?')
-		}
-	}
-
-	return VirtualNode{
-		Key: key,
-		TagName: tagName,
-		EventHandlers: eventHandlers.Mapping(),
-		Attributes: attributes.Mapping(),
-		Children: childList[0:],
-	}
+function<renderableVirtualNode> Div(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'div', props: props, children: childStream}
 }
 
-function<VirtualNode> Div(props []{any}, childStream any*) {
-	return BuildVirtualNode('div', props, childStream)
+function<renderableVirtualNode> Img(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'img', props: props, children: childStream}
 }
 
-function<VirtualNode> Img(props []{any}, childStream any*) {
-	return BuildVirtualNode('img', props, childStream)
+function<renderableVirtualNode> Select(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'select', props: props, children: childStream}
 }
 
-function<VirtualNode> Select(props []{any}, childStream any*) {
-	return BuildVirtualNode('select', props, childStream)
+function<renderableVirtualNode> Option(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'option', props: props, children: childStream}
 }
 
-function<VirtualNode> Option(props []{any}, childStream any*) {
-	return BuildVirtualNode('option', props, childStream)
-}
-
-function<VirtualNode> Style(props []{any}, childStream any*) {
-	return BuildVirtualNode('style', props, childStream)
+function<renderableVirtualNode> Style(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'style', props: props, children: childStream}
 }
