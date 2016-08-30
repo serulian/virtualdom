@@ -1,6 +1,55 @@
+from component import Context, Reduce
+from types import VirtualNode
+
 /**
  * Decorates a value to only be added to the tree if the condition is met.
  *
  * Usage: <Div @If={some boolean condition}>...</Div>
  */
 function<any> If(value any, condition bool) { return value if condition else null }
+
+/**
+ * HideIf a value to be hidden in the DOM tree if the condition is met. Otherwise, no
+ * changes are made to the element.
+ *
+ * Usage: <Div @HideIf={some boolean condition}>...</Div>
+ */
+function<any> HideIf(value any, condition bool) {
+	// If the condition is not met, no need to mark it with a display, as we aren't
+	// hiding it in that case.
+	if !condition { return value }
+
+	// Otherwise, return a component which reduces the value to a VirtualNode
+	// and then we set the style display attribute.
+	return hiddenElementReducer{value: value}
+}
+
+/**
+ * hiddenElementReducer defines a small component which reduces the value to
+ * a VirtualNode and then decorates it with a `display: none` style.
+ */
+class hiddenElementReducer {
+	var<any> value
+
+	function<any> Reduce(context Context) {
+		virtualNode := Reduce(this.value, context)
+		return addStyle(virtualNode, 'display', 'none')
+	}
+}
+
+/**
+ * addStyle adds a CSS style with the given name and value to the `style` attribute on the virtual node,
+ * returning an updated copy of the virtual node.
+ */
+function<VirtualNode> addStyle(virtualNode VirtualNode, styleName string, styleValue string) {
+	attributes := virtualNode.Attributes ?? []{string}{}
+
+	var styleString = attributes['style'] ?? ''
+	if !styleString.IsEmpty {
+		styleString = styleString + '; '
+	}
+
+	updated := attributes.WithEntry('style', `${styleString}${styleName}: ${styleValue}`)
+
+	return virtualNode{Attributes: updated}
+}
