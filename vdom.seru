@@ -19,3 +19,11 @@ function<renderableVirtualNode> Option(props []{any}, childStream any*) {
 function<renderableVirtualNode> Style(props []{any}, childStream any*) {
 	return renderableVirtualNode{tagName: 'style', props: props, children: childStream}
 }
+
+function<renderableVirtualNode> Button(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'button', props: props, children: childStream}
+}
+
+function<renderableVirtualNode> TextArea(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'textarea', props: props, children: childStream}
+}
