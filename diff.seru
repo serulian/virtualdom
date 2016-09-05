@@ -53,7 +53,7 @@ function<string> generateId() {
  * buildDOM constructs the real DOM tree for the given virtual DOM tree starting at the
  * given node.
  */
-function<Node> buildDOM(vNode VirtualNode, parentPath string) {
+function<Node> buildDOM(vNode VirtualNode, parentPath string, reporter DiffReporter?) {
 	if vNode.TagName is null { return document.createTextNode(&(vNode.Text!)) }
 
 	var node = document.createElement(&(vNode.TagName!))
@@ -73,15 +73,18 @@ function<Node> buildDOM(vNode VirtualNode, parentPath string) {
 		}
 	}
 
+	var elementPath = parentPath + '.' + generateId()
+	setDOMPath(node, elementPath)
+
 	children := vNode.Children
 	if children is not null {
 		for child in children {
-			node.appendChild(buildDOM(child))
+			built := buildDOM(child, elementPath, reporter)
+			node.appendChild(built)
+			reporter?.NodeCreated(child, built)
 		}
 	}
 
-	var elementPath = parentPath + '.' + generateId()
-	setDOMPath(node, elementPath)
 	return node
 }
 
@@ -146,7 +149,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 
 		case DIFF_CREATE_NODE:
 			var parentPath = getDOMPath(domNode)
-			var createdNode = buildDOM(diff.ReplacementNode!, parentPath)
+			var createdNode = buildDOM(diff.ReplacementNode!, parentPath, reporter)
 			var insertionBeforeIndex = diff.NodeIndex
 			if insertionBeforeIndex >= int(domNode.childNodes.length) {
 				domNode.appendChild(createdNode)
@@ -164,7 +167,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			var parent = domNode.parentNode
 			if parent is not null {
 				var parentPath = getDOMPath(domNode)
-				var createdNode = buildDOM(diff.ReplacementNode!)
+				var createdNode = buildDOM(diff.ReplacementNode!, parentPath, reporter)
 				parent.replaceChild(domNode, createdNode)
 
 				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
