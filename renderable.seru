@@ -1,0 +1,257 @@
+from "github.com/Serulian/corelib:master" import Map, List
+from "github.com/Serulian/corelib:master" import SimpleError
+from eventmanager import EventManager
+from types import VirtualNode, FunctionReference
+
+/**
+ * RenderKeyed marks a renderable object with a comparison key for diff determination.
+ */
+interface RenderKeyed {
+	/**
+	 * RenderKey is a unique string for the renderable object. The RenderKey is used
+	 * to match renderable objects across Render calls.
+	 */
+	property<string?> RenderKey { get }
+}
+
+/**
+ * Context defines an interface provided to components via their Render methods that
+ * contains all context-sensitive information needed for the rendering to VirtualDOM.
+ */
+interface Context {
+	/**
+	 * Get looks up the context field with the given name and type. Returns it or null if
+	 * the name was not found. Should reject if the cast to type T fails.
+	 */
+	function<T?> Get<T>(name string)
+
+	/**
+	 * Renderer defines a custom render to use when rendering non-VirtualNode types.
+	 */
+	property<Renderer?> Renderer { get }
+
+	/**
+	 * EventManager returns the Event Manager for registering callbacks.
+	 */
+	property<EventManager> EventManager { get }
+}
+
+/**
+ * Renderer implements a custom render method for use by the VirtualDOM library.
+ */
+interface Renderer {
+	/**
+	 * Render renders the given renderable object found at the given path under the parent
+	 * Renderable.
+	 */
+	function<VirtualNode> Render(renderable Renderable, path string, parent Renderable, context Context)
+}
+
+/**
+ * EmptyContext defines an implementation of Context that simply contains an EventManager
+ * and no other contextual data.
+ */
+class EmptyContext {
+	var<EventManager> em
+
+	constructor WithEventManager(em EventManager) { return EmptyContext{em: em} }
+
+	function<T?> Get<T>(name string) { return null }
+
+	property<EventManager> EventManager {
+		get  { return this.em }
+	}
+
+	property<Renderer?> Renderer {
+		get { return null }
+	}
+}
+
+/**
+ * Renderable marks an instance as being renderable into a VirtualNode or component.
+ */
+interface Renderable {
+	/**
+	 * Render returns the rendered version of the component. This is typically a VirtualNode
+	 * tree, but can also be another Renderable.
+	 */
+	function<any> Render(context Context)
+}
+
+/**
+ * RenderToVirtualNode builds a new virtual DOM node for the given renderable instance.
+ */
+function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
+	var<any> current = instance
+	var<Renderable?> original = null
+	var index = 0
+
+	for true {
+		if current is null {
+			// Render as an empty text node.
+			return VirtualNode{Text: ''}
+		}
+
+		match current as typedValue {
+			case VirtualNode:
+				keyed, err := instance.(RenderKeyed)
+				if keyed is not null {
+					return typedValue{
+						Key: keyed.RenderKey,
+					}
+				}
+
+				return typedValue
+
+			case renderableVirtualNode:
+				current = typedValue.renderWithPath('', original ?? typedValue, context)
+
+			case Renderable:
+				if index == 0 {
+					original = typedValue
+				}
+
+				current = typedValue.Render(context)
+
+			default:
+				reject SimpleError.WithMessage('Unsupported value under Render. Did you forget to add a Render method?')
+		}
+
+		index = index + 1
+	}
+
+	return VirtualNode{Text: ''}
+}
+
+/**
+ * getChildPath returns the path for the given renderable instance under a parent path.
+ */
+function<string> getChildPath(parentPath string, childIndex int, child Renderable) {
+	var<any> anyChild = child
+
+	renderKeyed, _ := anyChild.(RenderKeyed)
+	if renderKeyed is not null {
+		key := renderKeyed.RenderKey
+		if key is not null {
+			return `${parentPath}.${key}`
+		}
+	}
+
+	return `${parentPath}[${childIndex}]`
+}
+
+/**
+ * renderableVirtualNode defines a component which represents a VirtualNode. We return this
+ * from SML (instead of an actual VirtualNode) because it allows for lazy evaluation of its
+ * children.
+ */
+class renderableVirtualNode {
+	var<string> tagName
+	var<[]{any}> props
+	var<any*> children
+
+	property<string?> RenderKey {
+		get {
+			if this.props["Key"] is not null {
+				return this.props["Key"].(string)
+			}
+
+			return null
+		}
+	}
+
+	function<any> Render(context Context) {
+		return this.renderWithPath('', this, context)
+	}
+
+	function<VirtualNode> renderWithPath(path string, parent Renderable, context Context) {
+		var attributes = Map<string, string>.Empty()
+		var eventHandlers = Map<string, FunctionReference>.Empty()
+		var<string?> key = null
+		var<FunctionReference?> nodeInsertedHandler = null
+
+		currentPath := `${path}.${this.tagName}`
+		props := this.props
+		children := this.children
+
+		// Convert the props into attributes, the key, and callbacks.
+		if !props.IsEmpty {
+			if props["Key"] is not null {
+				key = props["Key"].(string)
+			}
+
+			for name in props.Keys {
+				if name == "ondomnodeinserted" {
+					fn := props[name].(function<void>(any))
+					nodeInsertedHandler = context.EventManager.RegisterFunction(fn)
+				} else if name.HasPrefix("on") {
+					fn := props[name].(function<void>(any))
+					eventHandlers[name[2:]] = context.EventManager.RegisterFunction(fn)
+				} else if name != "Key" {
+					if name == "className" {
+						attributes['class'] = props[name].(string)
+					} else {
+						match props[name] as propValue {
+							case string:
+								attributes[name] = propValue
+
+							case bool:
+								attributes[name] = name
+
+							default:
+								reject SimpleError.WithMessage('Unsupported attribute type')
+						}
+					}
+				}
+			}
+		}
+
+		// Render the children into their VirtualNode representations.
+		var childList = List<VirtualNode>.Empty()
+		var index = 0
+
+		for child in children {
+			index = index + 1
+
+			// We skip null children, as they are the result of decorators deciding
+			// not to add the child.
+			if child is null {
+				continue
+			}
+
+			match child as typedChild {
+				case string:
+					childList.Add(VirtualNode{Text: typedChild})
+
+				case VirtualNode:
+					childList.Add(typedChild)
+
+				case renderableVirtualNode:
+					childPath := getChildPath(path, index, typedChild)
+					cn := typedChild.renderWithPath(childPath, parent, context)
+					childList.Add(cn)
+
+				case Renderable:
+					renderer := context.Renderer
+					if renderer is not null {
+						childPath := getChildPath(path, index, typedChild)
+						childList.Add(renderer.Render(typedChild, childPath, parent, context))
+					} else {
+						childList.Add(RenderToVirtualNode(typedChild, context))
+					}
+
+				default:
+					reject SimpleError.WithMessage('Unsupported instance under VirtualNode. Did you forget to add a Render() method to a class?')
+			}
+		}
+
+		return VirtualNode{
+			Key: key,
+			TagName: this.tagName,
+			EventHandlers: eventHandlers.Mapping(),
+			Attributes: attributes.Mapping(),
+			Children: childList[0:],
+			DOMNodeInserted: nodeInsertedHandler,
+		}
+	}
+}
