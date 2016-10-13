@@ -6,13 +6,15 @@ from webidl`dom` import Element, Node, document
 
 from internal import getDOMPath, setDOMPath
 from types import VirtualNode, FunctionReference
-from wrappers import DOMNode, DOMError, VirtualNodeWrapper
+from wrappers import DOMNode, DOMError, VirtualNodeWrapper, keyAttachment
 
 var<string> DIFF_REPLACE_NODE = 'replace-node'
 
 var<string> DIFF_REMOVE_NODE = 'remove-node'
 
 var<string> DIFF_CREATE_NODE = 'create-node'
+
+var<string> DIFF_SAME = 'same-node'
 
 var<string> DIFF_THUNK = 'thunk'
 
@@ -58,7 +60,7 @@ function<Node> buildDOM(vNode VirtualNode, parentPath string, reporter DiffRepor
 
 	var node = document.createElement(&(vNode.TagName!))
 	if vNode.Key is not null {
-		node.setAttribute(&"data-key", &(vNode.Key!))
+		keyAttachment.Set(node, (vNode.Key!))
 	}
 
 	attributes := vNode.Attributes
@@ -114,6 +116,9 @@ function<Diff> ComputeDiff(updated VirtualNode, existing DOMNode) {
  */
 function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 	switch diff.Type {
+		case DIFF_SAME:
+			// Do absolutely nothing, as it is the same exact virtual node.
+
 		case DIFF_THUNK:
 			// Update any attributes.
 			for attrDiff in diff.Attributes {
@@ -168,7 +173,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			if parent is not null {
 				var parentPath = getDOMPath(domNode)
 				var createdNode = buildDOM(diff.ReplacementNode!, parentPath, reporter)
-				parent.replaceChild(domNode, createdNode)
+				parent.replaceChild(createdNode, domNode)
 
 				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
 				reporter?.NodeRemoved(domNode)
@@ -183,12 +188,31 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
  * under its parent element.
  */
 function<string> getInferredNodeKey(node DOMNode, index int) {
-	if node.Key is not null { return node.Key! } else if node.IsElement {
+	if node.Key is not null { 
+		return node.Key!
+	} else if node.IsElement {
 		return node.TagName + ':' + index.String()
-	} else { return node.TextData! }
+	} else {
+		return node.TextData!
+	}
 }
 
 function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) {
+	// Check if the existing node is literally the same as the updated node. If so, we just
+	// skip the diff entirely.
+	existingVirtual := existing.Virtual
+	if existingVirtual is not null {
+		if existingVirtual == updatedNode {
+			return Diff{
+				Type: DIFF_SAME,
+				NodeIndex: parentIndex,
+				ReplacementNode: updatedNode,
+				Children: []Diff{},
+				Attributes: []AttributeDiff{},
+			}
+		}
+	}
+
 	var updated = VirtualNodeWrapper.For(updatedNode)
 
 	// Determine whether the existing node needs replacement. If the nodes have the same
@@ -208,7 +232,7 @@ function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentInde
 			// Node is different. Replace.
 			needsReplacement = true
 
-		case existing.IsElement && updated.TagName != existing.TagName:
+		case existing.IsElement && updated.TagName.ToLowerCase() != existing.TagName.ToLowerCase():
 			// Element is different. Replace.
 			needsReplacement = true
 
@@ -236,11 +260,6 @@ function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentInde
 
 		for attributeName in existing.AttributeNames {
 			existingAttributes[attributeName] = existing.GetAttribute(attributeName)
-
-			if attributeName == "data-key" {
-				continue
-			}
-
 			if updated.GetAttribute(attributeName) is null {
 				attributeDiffs.Add(AttributeDiff{Name: attributeName})
 			}

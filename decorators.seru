@@ -1,4 +1,4 @@
-from component import Context, Reduce
+from renderable import Context, RenderToVirtualNode, renderableVirtualNode
 from types import VirtualNode
 
 /**
@@ -6,7 +6,23 @@ from types import VirtualNode
  *
  * Usage: <Div @If={some boolean condition}>...</Div>
  */
-function<any> If(value any, condition bool) { return value if condition else null }
+function<any> If(value any, condition bool) { return value if condition else VirtualNode{Text: ''} }
+
+/**
+ * DynamicAttributes marks a renderable virtual node with attributes only if their expression
+ * value is true. This is useful for marking DOM nodes with attributes such as `selected` or
+ * `readonly`.
+ *
+ * Usage: <TextArea @DynamicAttributes={{'readonly': someBoolExpr}} />
+ */
+function<renderableVirtualNode> DynamicAttributes(value renderableVirtualNode, attributes map<string, bool>) {
+	for attributeName in attributes.Keys {
+		if attributes[attributeName] ?? false {
+			value.props = value.props.WithEntry(attributeName, true)
+		}
+	}
+	return value
+}
 
 /**
  * HideIf a value to be hidden in the DOM tree if the condition is met. Otherwise, no
@@ -21,19 +37,11 @@ function<any> HideIf(value any, condition bool) {
 
 	// Otherwise, return a component which reduces the value to a VirtualNode
 	// and then we set the style display attribute.
-	return hiddenElementReducer{value: value}
-}
-
-/**
- * hiddenElementReducer defines a small component which reduces the value to
- * a VirtualNode and then decorates it with a `display: none` style.
- */
-class hiddenElementReducer {
-	var<any> value
-
-	function<any> Reduce(context Context) {
-		virtualNode := Reduce(this.value, context)
-		return addStyle(virtualNode, 'display', 'none')
+	return elementRenderer{
+		value: value,
+		decorator: function<VirtualNode>(virtualNode VirtualNode) {
+			return addStyle(virtualNode, 'display', 'none')
+		},
 	}
 }
 
@@ -50,6 +58,19 @@ function<VirtualNode> addStyle(virtualNode VirtualNode, styleName string, styleV
 	}
 
 	updated := attributes.WithEntry('style', `${styleString}${styleName}: ${styleValue}`)
-
 	return virtualNode{Attributes: updated}
 }
+
+/**
+ * elementRenderer defines a small component which renders the value to
+ * a VirtualNode and then decorates it with a call to the specified function.
+ */
+class elementRenderer {
+	var<any> value
+	var<function<VirtualNode>(VirtualNode)> decorator
+
+	function<any> Render(context Context) {
+		return this.decorator(RenderToVirtualNode(this.value, context))
+	}
+}
+

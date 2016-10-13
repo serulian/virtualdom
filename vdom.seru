@@ -1,4 +1,8 @@
-from component import renderableVirtualNode
+from renderable import renderableVirtualNode
+
+function<renderableVirtualNode> Span(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'span', props: props, children: childStream}
+}
 
 function<renderableVirtualNode> Div(props []{any}, childStream any*) {
 	return renderableVirtualNode{tagName: 'div', props: props, children: childStream}
