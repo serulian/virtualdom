@@ -1,5 +1,5 @@
 from "github.com/Serulian/corelib:master" import Map, List
-from "github.com/Serulian/corelib:master" import SimpleError
+from "github.com/Serulian/corelib:master" import SimpleError, Stringable
 from eventmanager import EventManager
 from types import VirtualNode, FunctionReference
 
@@ -239,6 +239,9 @@ class renderableVirtualNode {
 					} else {
 						childList.Add(RenderToVirtualNode(typedChild, context))
 					}
+
+				case Stringable:
+					childList.Add(VirtualNode{Text: typedChild.String()})
 
 				default:
 					reject SimpleError.WithMessage('Unsupported instance under VirtualNode. Did you forget to add a Render() method to a class?')

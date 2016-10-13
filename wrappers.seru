@@ -7,7 +7,7 @@ from types import VirtualNode
 
 /**
  * keyAttachment defines an attachment for holding the VirtualDOM key on a DOM element.
- */s
+ */
 var<Attachment<string>> keyAttachment = Attachment<string>.Unique('vdom-key')
 
 /**
@@ -68,7 +68,6 @@ type NodeWrapper : Node {
 
 	property<string?> Key {
 		get  {
-			if !this.IsElement { return this.TextData }
 			return keyAttachment[&this]
 		}
 	}
@@ -127,8 +126,6 @@ type VirtualNodeWrapper : VirtualNode {
 
 	property<string?> Key {
 		get  {
-			if !this.IsElement { return this.TextData }
-
 			return VirtualNode(this).Key
 		}
 	}

@@ -193,7 +193,7 @@ function<string> getInferredNodeKey(node DOMNode, index int) {
 	} else if node.IsElement {
 		return node.TagName + ':' + index.String()
 	} else {
-		return node.TextData!
+		return node.TextData! + ':' + index.String()
 	}
 }
 

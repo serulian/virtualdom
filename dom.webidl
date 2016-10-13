@@ -44,18 +44,28 @@ interface Element : Node {
 	void removeEventListener(String type, any listener, optional Boolean capture);
 };
 
+interface HTMLIFrameElement : Element {
+	readonly attribute HTMLWindow contentWindow;
+};
+
 interface Text : Node {
 	readonly attribute String wholeText;	
 };
 
-interface Document {
+interface HTMLDocument {
   Element createElement(String localName);
   Text createTextNode(String data);
 
+  attribute Element body;
   Element getElementById(String elementId);
 };
 
 [Global]
 interface Window {
-   static readonly attribute Document document;
+   static readonly attribute HTMLDocument document;
 };
+
+interface HTMLWindow {
+   readonly attribute HTMLDocument document;		
+};
+

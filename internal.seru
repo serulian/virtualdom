@@ -6,10 +6,9 @@ var<string> elementInternalPath = "__internal_dom_path"
 function<string> getDOMPath(node Node) {
 	var existingPath = node[&elementInternalPath]
 	if existingPath is null { return '(root)' }
-
 	return string(existingPath.(DOMString))
 }
 
 function<void> setDOMPath(node Node, elementPath string) {
-	node[&elementInternalPath] = elementPath
+	node[&elementInternalPath] = &elementPath
 }
