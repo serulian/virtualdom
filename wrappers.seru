@@ -1,7 +1,14 @@
 from webidl`github.com/Serulian/corelib:master` import String as DOMString
 from webidl`dom` import Element, Event, Node, Text, document
 
+from "github.com/Serulian/attachment" import Attachment
+
 from types import VirtualNode
+
+/**
+ * keyAttachment defines an attachment for holding the VirtualDOM key on a DOM element.
+ */
+var<Attachment<string>> keyAttachment = Attachment<string>.Unique('vdom-key')
 
 /**
  * DOMNode defines an abstract interface for working with a DOM node or VirtualNode.
@@ -22,6 +29,8 @@ interface DOMNode {
 	function<DOMNode> GetChild(index int)
 
 	function<string?> GetAttribute(name string)
+
+	property<VirtualNode?> Virtual { get }
 }
 
 /**
@@ -59,9 +68,7 @@ type NodeWrapper : Node {
 
 	property<string?> Key {
 		get  {
-			if !this.IsElement { return this.TextData }
-
-			return this.GetAttribute('data-key')
+			return keyAttachment[&this]
 		}
 	}
 
@@ -87,6 +94,10 @@ type NodeWrapper : Node {
 		get  { return int(Element(this).childNodes.length) }
 	}
 
+	property<VirtualNode?> Virtual {
+		get { return null }
+	}
+
 	function<DOMNode> GetChild(index int) {
 		var child = Element(this).childNodes[&index]
 		if child is null { reject DOMError{message: 'Invalid child index'} }
@@ -109,16 +120,25 @@ type NodeWrapper : Node {
 type VirtualNodeWrapper : VirtualNode {
 	constructor For(node VirtualNode) { return VirtualNodeWrapper(node) }
 
+	property<VirtualNode?> Virtual {
+		get { return VirtualNode(this) }
+	}
+
 	property<string?> Key {
 		get  {
-			if !this.IsElement { return this.TextData }
-
 			return VirtualNode(this).Key
 		}
 	}
 
 	property<[]string> AttributeNames {
-		get  { return VirtualNode(this).Attributes?.Keys ?? []string{} }
+		get  {
+			attrs := VirtualNode(this).Attributes
+			if attrs is null {
+				return []string{}
+			} else {
+				return attrs.Keys
+			}
+		}
 	}
 
 	property<bool> IsElement {
@@ -130,7 +150,14 @@ type VirtualNodeWrapper : VirtualNode {
 	}
 
 	property<int> ChildCount {
-		get  { return VirtualNode(this).Children?.Length ?? 0 }
+		get  {
+			children := VirtualNode(this).Children
+			if children is null {
+				return 0
+			} else {
+				return children.Length
+			}
+		}
 	}
 
 	property<string?> TextData {
