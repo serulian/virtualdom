@@ -58,6 +58,7 @@ interface HTMLDocument {
 
   attribute Element body;
   Element getElementById(String elementId);
+  Array getElementsByTagName(String tagName);
 };
 
 [Global]

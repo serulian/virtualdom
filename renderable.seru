@@ -41,10 +41,9 @@ interface Context {
  */
 interface Renderer {
 	/**
-	 * Render renders the given renderable object found at the given path under the parent
-	 * Renderable.
+	 * Render renders the given renderable object under the root Renderable.
 	 */
-	function<VirtualNode> Render(renderable Renderable, path string, parent Renderable, context Context)
+	function<VirtualNode> Render(renderable Renderable, root Renderable, pathUnderRoot string, context Context)
 }
 
 /**
@@ -83,7 +82,7 @@ interface Renderable {
  */
 function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
 	var<any> current = instance
-	var<Renderable?> original = null
+	var<Renderable?> rootParent = null
 	var index = 0
 
 	for true {
@@ -104,11 +103,11 @@ function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
 				return typedValue
 
 			case renderableVirtualNode:
-				current = typedValue.renderWithPath('', original ?? typedValue, context)
+				current = typedValue.renderUnderRoot(rootParent ?? typedValue, '', context)
 
 			case Renderable:
 				if index == 0 {
-					original = typedValue
+					rootParent = typedValue
 				}
 
 				current = typedValue.Render(context)
@@ -161,16 +160,15 @@ class renderableVirtualNode {
 	}
 
 	function<any> Render(context Context) {
-		return this.renderWithPath('', this, context)
+		return this.renderUnderRoot(this, '', context)
 	}
 
-	function<VirtualNode> renderWithPath(path string, parent Renderable, context Context) {
+	function<VirtualNode> renderUnderRoot(root Renderable, pathUnderRoot string, context Context) {
 		var attributes = Map<string, string>.Empty()
 		var eventHandlers = Map<string, FunctionReference>.Empty()
 		var<string?> key = null
 		var<FunctionReference?> nodeInsertedHandler = null
 
-		currentPath := `${path}.${this.tagName}`
 		props := this.props
 		children := this.children
 
@@ -227,15 +225,15 @@ class renderableVirtualNode {
 					childList.Add(typedChild)
 
 				case renderableVirtualNode:
-					childPath := getChildPath(path, index, typedChild)
-					cn := typedChild.renderWithPath(childPath, parent, context)
+					currentPathUnderRoot := `${pathUnderRoot}[${index}]`
+					cn := typedChild.renderUnderRoot(root, currentPathUnderRoot, context)
 					childList.Add(cn)
 
 				case Renderable:
 					renderer := context.Renderer
 					if renderer is not null {
-						childPath := getChildPath(path, index, typedChild)
-						childList.Add(renderer.Render(typedChild, childPath, parent, context))
+						currentPathUnderRoot := `${pathUnderRoot}[${index}]`
+						childList.Add(renderer.Render(typedChild, root, currentPathUnderRoot, context))
 					} else {
 						childList.Add(RenderToVirtualNode(typedChild, context))
 					}

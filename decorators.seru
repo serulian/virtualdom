@@ -31,15 +31,10 @@ function<renderableVirtualNode> DynamicAttributes(value renderableVirtualNode, a
  * Usage: <Div @HideIf={some boolean condition}>...</Div>
  */
 function<any> HideIf(value any, condition bool) {
-	// If the condition is not met, no need to mark it with a display, as we aren't
-	// hiding it in that case.
-	if !condition { return value }
-
-	// Otherwise, return a component which reduces the value to a VirtualNode
-	// and then we set the style display attribute.
 	return elementRenderer{
 		value: value,
 		decorator: function<VirtualNode>(virtualNode VirtualNode) {
+			if !condition { return virtualNode }
 			return addStyle(virtualNode, 'display', 'none')
 		},
 	}
