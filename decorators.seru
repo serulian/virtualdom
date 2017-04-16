@@ -15,7 +15,7 @@ function<any> If(value any, condition bool) { return value if condition else Vir
  *
  * Usage: <TextArea @DynamicAttributes={{'readonly': someBoolExpr}} />
  */
-function<renderableVirtualNode> DynamicAttributes(value renderableVirtualNode, attributes map<string, bool>) {
+function<renderableVirtualNode> DynamicAttributes(value renderableVirtualNode, attributes mapping<bool>) {
 	for attributeName in attributes.Keys {
 		if attributes[attributeName] ?? false {
 			value.props = value.props.WithEntry(attributeName, true)
