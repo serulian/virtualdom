@@ -55,3 +55,7 @@ function<renderableVirtualNode> Ul(props []{any}, childStream any*) {
 function<renderableVirtualNode> Li(props []{any}, childStream any*) {
 	return renderableVirtualNode{tagName: 'li', props: props, children: childStream}
 }
+
+function<renderableVirtualNode> Input(props []{any}, childStream any*) {
+	return renderableVirtualNode{tagName: 'input', props: props, children: childStream}
+}
