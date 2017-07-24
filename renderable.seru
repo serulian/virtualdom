@@ -1,5 +1,5 @@
-from "github.com/Serulian/corelib:master" import Map, List
-from "github.com/Serulian/corelib:master" import SimpleError, Stringable
+from "github.com/serulian/corelib:master" import Map, List
+from "github.com/serulian/corelib:master" import SimpleError, Stringable
 from eventmanager import EventManager
 from types import VirtualNode, FunctionReference
 

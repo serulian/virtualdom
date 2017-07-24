@@ -1,6 +1,6 @@
-from webidl`github.com/Serulian/corelib:master` import String as DOMString
+from webidl`github.com/serulian/corelib:master` import String as DOMString
 
-from "github.com/Serulian/corelib:master" import Map, List, Set
+from "github.com/serulian/corelib:master" import Map, List, Set
 
 from webidl`dom` import Element, Node, document
 

@@ -1,7 +1,7 @@
-from webidl`github.com/Serulian/corelib:master` import String as DOMString
+from webidl`github.com/serulian/corelib:master` import String as DOMString
 from webidl`dom` import Element, Event, Node, Text, document
 
-from "github.com/Serulian/attachment" import Attachment
+from "github.com/serulian/attachment" import Attachment
 
 from types import VirtualNode
 
