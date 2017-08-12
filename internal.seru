@@ -1,4 +1,4 @@
-from webidl`github.com/serulian/corelib:master` import String as DOMString
+from webidl`@core` import String as DOMString
 from webidl`dom` import Node
 
 var<string> elementInternalPath = "__internal_dom_path"

@@ -1,6 +1,6 @@
-from webidl`github.com/serulian/corelib:master` import Function as NativeFunction
+from webidl`@core` import Function as NativeFunction
 
-from "github.com/serulian/corelib:master" import Map, List, Set
+from "@core" import Map, List, Set
 
 from webidl`dom` import Element, Node, Event
 
