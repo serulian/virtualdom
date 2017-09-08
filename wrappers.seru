@@ -136,7 +136,7 @@ type VirtualNodeWrapper : VirtualNode {
 			if attrs is null {
 				return []string{}
 			} else {
-				return attrs.Keys
+				return slice<string>.From(attrs.Keys)
 			}
 		}
 	}
