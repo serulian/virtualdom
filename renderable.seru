@@ -1,5 +1,5 @@
-from "@core" import Map, List
-from "@core" import SimpleError, Stringable
+from @core import Map, List
+from @core import SimpleError, Stringable
 from eventmanager import EventManager
 from types import VirtualNode, FunctionReference
 
@@ -53,12 +53,14 @@ interface Renderer {
 class EmptyContext {
 	var<EventManager> em
 
-	constructor WithEventManager(em EventManager) { return EmptyContext{em: em} }
+	constructor WithEventManager(em EventManager) {
+		return EmptyContext{em: em}
+	}
 
 	function<T?> Get<T>(name string) { return null }
 
 	property<EventManager> EventManager {
-		get  { return this.em }
+		get { return this.em }
 	}
 
 	property<Renderer?> Renderer {
@@ -95,9 +97,7 @@ function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
 			case VirtualNode:
 				keyed, err := instance.(RenderKeyed)
 				if keyed is not null {
-					return typedValue{
-						Key: keyed.RenderKey,
-					}
+					return typedValue{Key: keyed.RenderKey}
 				}
 
 				return typedValue
@@ -111,6 +111,9 @@ function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
 				}
 
 				current = typedValue.Render(context)
+
+			case Stringable:
+				return VirtualNode{Text: typedValue.String()}
 
 			default:
 				reject SimpleError.WithMessage('Unsupported value under Render. Did you forget to add a Render method?')
