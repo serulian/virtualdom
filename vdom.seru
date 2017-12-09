@@ -1,61 +1,65 @@
 from renderable import renderableVirtualNode
 
-function<renderableVirtualNode> A(props []{any}, childStream any*) {
+function A(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'a', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Span(props []{any}, childStream any*) {
+function Span(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'span', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Div(props []{any}, childStream any*) {
+function Div(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'div', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Img(props []{any}, childStream any*) {
+function Img(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'img', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Select(props []{any}, childStream any*) {
+function Select(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'select', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Option(props []{any}, childStream any*) {
+function Option(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'option', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Style(props []{any}, childStream any*) {
+function Style(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'style', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Button(props []{any}, childStream any*) {
+function Button(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'button', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> TextArea(props []{any}, childStream any*) {
-	return renderableVirtualNode{tagName: 'textarea', props: props, children: childStream}
+function TextArea(props []{any}, childStream any*) renderableVirtualNode {
+	return renderableVirtualNode{
+		tagName: 'textarea',
+		props: props,
+		children: childStream,
+	}
 }
 
-function<renderableVirtualNode> IFrame(props []{any}, childStream any*) {
+function IFrame(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'iframe', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Pre(props []{any}, childStream any*) {
+function Pre(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'pre', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Nav(props []{any}, childStream any*) {
+function Nav(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'nav', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Ul(props []{any}, childStream any*) {
+function Ul(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'ul', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Li(props []{any}, childStream any*) {
+function Li(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'li', props: props, children: childStream}
 }
 
-function<renderableVirtualNode> Input(props []{any}, childStream any*) {
+function Input(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'input', props: props, children: childStream}
 }

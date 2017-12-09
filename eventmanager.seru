@@ -1,6 +1,6 @@
 from webidl`@core` import Function as NativeFunction
 
-from "@core" import Map, List, Set
+from @core import Map, List, Set
 
 from webidl`dom` import Element, Node, Event
 
@@ -13,19 +13,21 @@ from wrappers import NodeWrapper
  * DOM tree.
  */
 class EventManager {
-	var<Element> element
-	var<Set<string>> registered = Set<string>.Empty()
-	var<int> functionRefCounter = 0
-	var<Map<string, function<void>(any)>> handlers = Map<string, function<void>(any)>.Empty()
-	var<eventTree> tree = eventTree.new()
+	var element Element
+	var registered Set<string> = Set<string>.Empty()
+	var functionRefCounter int = 0
+	var handlers Map<string, function<void>(any)> = Map<string, function<void>(any)>.Empty()
+	var tree eventTree = eventTree.new()
 
 	/**
 	 * ForElement returns an EventManager rooted at the specified DOM element. All event handlers
 	 * will be registered on the specified element.
 	 */
-	constructor ForElement(element Element) { return EventManager{element: element} }
+	constructor ForElement(element Element) {
+		return EventManager{element: element}
+	}
 
-	function<void> NodeRemoved(domNode Node) {
+	function NodeRemoved(domNode Node) {
 		if !NodeWrapper(domNode).IsElement { return }
 
 		var path = getDOMPath(domNode)
@@ -33,7 +35,7 @@ class EventManager {
 		this.tree.removeBranch(split)
 	}
 
-	function<void> NodeCreated(virtualNode VirtualNode, domNode Node) {
+	function NodeCreated(virtualNode VirtualNode, domNode Node) {
 		insertedCallback := virtualNode.DOMNodeInserted
 		if insertedCallback is not null {
 			this.invokeHandler(insertedCallback, domNode)
@@ -57,7 +59,7 @@ class EventManager {
 		}
 	}
 
-	function<void> NodeUpdated(virtualNode VirtualNode, domNode Node) {
+	function NodeUpdated(virtualNode VirtualNode, domNode Node) {
 		var path = getDOMPath(domNode)
 		var split = path.Split('.')
 		var treeEntry = this.tree.getOrAddBranch(split)
@@ -74,14 +76,14 @@ class EventManager {
 		}
 	}
 
-	function<FunctionReference> RegisterFunction(func function<void>(any)) {
+	function RegisterFunction(func function<void>(any)) FunctionReference {
 		var ref = this.functionRefCounter.String()
 		this.handlers[ref] = func
 		this.functionRefCounter = this.functionRefCounter + 1
 		return FunctionReference(ref)
 	}
 
-	function<void> handleEvent(evt Event) {
+	function handleEvent(evt Event) {
 		var target = evt.target
 		if target is null { return }
 
@@ -97,16 +99,16 @@ class EventManager {
 		}
 	}
 
-	function<void> invokeHandler(handler FunctionReference, param any) {
+	function invokeHandler(handler FunctionReference, param any) {
 		var handlerFunc = this.handlers[string(handler)]
 		if handlerFunc is not null {
 			handlerFunc(param)
 		}
 	}
 
-	function<void> register(eventName string) {
+	function register(eventName string) {
 		if this.registered.Add(eventName) {
-			this.element.addEventListener(&eventName, function<void>(evt Event) {
+			this.element.addEventListener(&eventName, function(evt Event) {
 				this.handleEvent(evt)
 			})
 		}
@@ -117,10 +119,10 @@ class EventManager {
  * eventTree represents a single level of an event tree for propagation of events.
  */
 class eventTree {
-	var<Map<string, eventTree>> children = Map<string, eventTree>.Empty()
-	var<Map<string, FunctionReference>> handlers = Map<string, FunctionReference>.Empty()
+	var children Map<string, eventTree> = Map<string, eventTree>.Empty()
+	var handlers Map<string, FunctionReference> = Map<string, FunctionReference>.Empty()
 
-	function<void> removeBranch(parts []string) {
+	function removeBranch(parts []string) {
 		if parts.Length == 1 {
 			this.children.RemoveKey(parts[0])
 			return
@@ -132,7 +134,7 @@ class eventTree {
 		(child!).removeBranch(parts[1:])
 	}
 
-	function<eventTree> getOrAddBranch(parts []string) {
+	function getOrAddBranch(parts []string) eventTree {
 		if parts.Length == 0 { return this }
 
 		var child = this.children[parts[0]]
@@ -147,7 +149,7 @@ class eventTree {
 		return (child!).getOrAddBranch(parts[1:])
 	}
 
-	function<eventTree?> getBranch(parts []string) {
+	function getBranch(parts []string) eventTree? {
 		if parts.Length == 0 { return this }
 
 		var child = this.children[parts[0]]
@@ -156,15 +158,15 @@ class eventTree {
 		return (child!).getBranch(parts[1:])
 	}
 
-	function<void> clearHandlers() {
+	function clearHandlers() {
 		this.handlers = Map<string, FunctionReference>.Empty()
 	}
 
-	function<void> addHandler(eventName string, funcRef FunctionReference) {
+	function addHandler(eventName string, funcRef FunctionReference) {
 		this.handlers[eventName] = funcRef
 	}
 
-	function<FunctionReference?> lookupHandler(eventName string) {
+	function lookupHandler(eventName string) FunctionReference? {
 		return this.handlers[eventName]
 	}
 }

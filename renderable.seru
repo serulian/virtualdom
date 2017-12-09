@@ -11,7 +11,7 @@ interface RenderKeyed {
 	 * RenderKey is a unique string for the renderable object. The RenderKey is used
 	 * to match renderable objects across Render calls.
 	 */
-	property<string?> RenderKey { get }
+	property RenderKey string? { get }
 }
 
 /**
@@ -23,17 +23,17 @@ interface Context {
 	 * Get looks up the context field with the given name and type. Returns it or null if
 	 * the name was not found. Should reject if the cast to type T fails.
 	 */
-	function<T?> Get<T>(name string)
+	function Get<T>(name string) T?
 
 	/**
 	 * Renderer defines a custom render to use when rendering non-VirtualNode types.
 	 */
-	property<Renderer?> Renderer { get }
+	property Renderer Renderer? { get }
 
 	/**
 	 * EventManager returns the Event Manager for registering callbacks.
 	 */
-	property<EventManager> EventManager { get }
+	property EventManager EventManager { get }
 }
 
 /**
@@ -43,7 +43,7 @@ interface Renderer {
 	/**
 	 * Render renders the given renderable object under the root Renderable.
 	 */
-	function<VirtualNode> Render(renderable Renderable, root Renderable, pathUnderRoot string, context Context)
+	function Render(renderable Renderable, root Renderable, pathUnderRoot string, context Context) VirtualNode
 }
 
 /**
@@ -51,19 +51,19 @@ interface Renderer {
  * and no other contextual data.
  */
 class EmptyContext {
-	var<EventManager> em
+	var em EventManager
 
 	constructor WithEventManager(em EventManager) {
 		return EmptyContext{em: em}
 	}
 
-	function<T?> Get<T>(name string) { return null }
+	function Get<T>(name string) T? { return null }
 
-	property<EventManager> EventManager {
+	property EventManager EventManager {
 		get { return this.em }
 	}
 
-	property<Renderer?> Renderer {
+	property Renderer Renderer? {
 		get { return null }
 	}
 }
@@ -76,15 +76,15 @@ interface Renderable {
 	 * Render returns the rendered version of the component. This is typically a VirtualNode
 	 * tree, but can also be another Renderable.
 	 */
-	function<any> Render(context Context)
+	function Render(context Context) any
 }
 
 /**
  * RenderToVirtualNode builds a new virtual DOM node for the given renderable instance.
  */
-function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
-	var<any> current = instance
-	var<Renderable?> rootParent = null
+function RenderToVirtualNode(instance any, context Context) VirtualNode {
+	var current any = instance
+	var rootParent Renderable? = null
 	var index = 0
 
 	for true {
@@ -128,8 +128,8 @@ function<VirtualNode> RenderToVirtualNode(instance any, context Context) {
 /**
  * getChildPath returns the path for the given renderable instance under a parent path.
  */
-function<string> getChildPath(parentPath string, childIndex int, child Renderable) {
-	var<any> anyChild = child
+function getChildPath(parentPath string, childIndex int, child Renderable) string {
+	var anyChild any = child
 
 	renderKeyed, _ := anyChild.(RenderKeyed)
 	if renderKeyed is not null {
@@ -148,11 +148,11 @@ function<string> getChildPath(parentPath string, childIndex int, child Renderabl
  * children.
  */
 class renderableVirtualNode {
-	var<string> tagName
-	var<[]{any}> props
-	var<any*> children
+	var tagName string
+	var props []{any}
+	var children any*
 
-	property<string?> RenderKey {
+	property RenderKey string? {
 		get {
 			if this.props["Key"] is not null {
 				return this.props["Key"].(string)
@@ -162,15 +162,15 @@ class renderableVirtualNode {
 		}
 	}
 
-	function<any> Render(context Context) {
+	function Render(context Context) any {
 		return this.renderUnderRoot(this, '', context)
 	}
 
-	function<VirtualNode> renderUnderRoot(root Renderable, pathUnderRoot string, context Context) {
+	function renderUnderRoot(root Renderable, pathUnderRoot string, context Context) VirtualNode {
 		var attributes = Map<string, string>.Empty()
 		var eventHandlers = Map<string, FunctionReference>.Empty()
-		var<string?> key = null
-		var<FunctionReference?> nodeInsertedHandler = null
+		var key string? = null
+		var nodeInsertedHandler FunctionReference? = null
 
 		props := this.props
 		children := this.children
