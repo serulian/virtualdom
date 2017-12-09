@@ -1,14 +1,14 @@
 from webidl`dom` import Node
 
-from renderable import Renderable, Context, RenderToVirtualNode
 from diff import ComputeDiff, ApplyDiff
+from renderable import Renderable, Context, RenderToVirtualNode
 from wrappers import NodeWrapper
 
 /**
  * Render renders the specified object to the given DOM node, automatically performing
  * the diff and apply.
  */
-function<void> Render(renderable Renderable, context Context, node Node) {
+function Render(renderable Renderable, context Context, node Node) {
 	rendered := RenderToVirtualNode(renderable, context)
 	var diff = ComputeDiff(rendered, NodeWrapper.For(node))
 	ApplyDiff(diff, node, context.EventManager)

@@ -6,7 +6,9 @@ from types import VirtualNode
  *
  * Usage: <Div @If={some boolean condition}>...</Div>
  */
-function<any> If(value any, condition bool) { return value if condition else VirtualNode{Text: ''} }
+function If(value any, condition bool) any {
+	return value if condition else VirtualNode{Text: ''}
+}
 
 /**
  * DynamicAttributes marks a renderable virtual node with attributes only if their expression
@@ -15,7 +17,7 @@ function<any> If(value any, condition bool) { return value if condition else Vir
  *
  * Usage: <TextArea @DynamicAttributes={{'readonly': someBoolExpr}} />
  */
-function<renderableVirtualNode> DynamicAttributes(value renderableVirtualNode, attributes mapping<bool>) {
+function DynamicAttributes(value renderableVirtualNode, attributes mapping<bool>) renderableVirtualNode {
 	for attributeName in attributes.Keys {
 		if attributes[attributeName] ?? false {
 			value.props = value.props.WithEntry(attributeName, true)
@@ -30,10 +32,10 @@ function<renderableVirtualNode> DynamicAttributes(value renderableVirtualNode, a
  *
  * Usage: <Div @HideIf={some boolean condition}>...</Div>
  */
-function<any> HideIf(value any, condition bool) {
+function HideIf(value any, condition bool) any {
 	return elementRenderer{
 		value: value,
-		decorator: function<VirtualNode>(virtualNode VirtualNode) {
+		decorator: function(virtualNode VirtualNode) VirtualNode {
 			if !condition { return virtualNode }
 			return addStyle(virtualNode, 'display', 'none')
 		},
@@ -44,7 +46,7 @@ function<any> HideIf(value any, condition bool) {
  * addStyle adds a CSS style with the given name and value to the `style` attribute on the virtual node,
  * returning an updated copy of the virtual node.
  */
-function<VirtualNode> addStyle(virtualNode VirtualNode, styleName string, styleValue string) {
+function addStyle(virtualNode VirtualNode, styleName string, styleValue string) VirtualNode {
 	attributes := virtualNode.Attributes ?? []{string}{}
 
 	var styleString = attributes['style'] ?? ''
@@ -61,11 +63,10 @@ function<VirtualNode> addStyle(virtualNode VirtualNode, styleName string, styleV
  * a VirtualNode and then decorates it with a call to the specified function.
  */
 class elementRenderer {
-	var<any> value
-	var<function<VirtualNode>(VirtualNode)> decorator
+	var value any
+	var decorator function<VirtualNode>(VirtualNode)
 
-	function<any> Render(context Context) {
+	function Render(context Context) any {
 		return this.decorator(RenderToVirtualNode(this.value, context))
 	}
 }
-

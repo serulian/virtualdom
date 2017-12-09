@@ -7,7 +7,7 @@ struct stylesheetProps {
 /**
  * Stylesheet returns a node for adding a stylesheet to the DOM.
  */
-function<VirtualNode> Stylesheet(props stylesheetProps, definition string?) {
+function Stylesheet(props stylesheetProps, definition string?) VirtualNode {
 	cssContents := definition ?? (props.Contents ?? '')
 
 	return VirtualNode{

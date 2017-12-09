@@ -1,6 +1,6 @@
 from webidl`@core` import String as DOMString
 
-from "@core" import Map, List, Set
+from @core import Map, List, Set
 
 from webidl`dom` import Element, Node, document
 
@@ -8,15 +8,15 @@ from internal import getDOMPath, setDOMPath
 from types import VirtualNode, FunctionReference
 from wrappers import DOMNode, DOMError, VirtualNodeWrapper, keyAttachment
 
-var<string> DIFF_REPLACE_NODE = 'replace-node'
+var DIFF_REPLACE_NODE string = 'replace-node'
 
-var<string> DIFF_REMOVE_NODE = 'remove-node'
+var DIFF_REMOVE_NODE string = 'remove-node'
 
-var<string> DIFF_CREATE_NODE = 'create-node'
+var DIFF_CREATE_NODE string = 'create-node'
 
-var<string> DIFF_SAME = 'same-node'
+var DIFF_SAME string = 'same-node'
 
-var<string> DIFF_THUNK = 'thunk'
+var DIFF_THUNK string = 'thunk'
 
 /**
  * AttributeDiff defines the difference of an attribute being added or removed.
@@ -44,9 +44,9 @@ struct Diff {
 	Attributes []AttributeDiff
 }
 
-var<int> nodeCounter = 0
+var nodeCounter int = 0
 
-function<string> generateId() {
+function generateId() string {
 	nodeCounter = nodeCounter + 1
 	return nodeCounter.String()
 }
@@ -55,12 +55,14 @@ function<string> generateId() {
  * buildDOM constructs the real DOM tree for the given virtual DOM tree starting at the
  * given node.
  */
-function<Node> buildDOM(vNode VirtualNode, parentPath string, reporter DiffReporter?) {
-	if vNode.TagName is null { return document.createTextNode(&(vNode.Text!)) }
+function buildDOM(vNode VirtualNode, parentPath string, reporter DiffReporter?) Node {
+	if vNode.TagName is null {
+		return document.createTextNode(&(vNode.Text!))
+	}
 
 	var node = document.createElement(&(vNode.TagName!))
 	if vNode.Key is not null {
-		keyAttachment.Set(node, (vNode.Key!))
+		keyAttachment.Set(node, vNode.Key!)
 	}
 
 	attributes := vNode.Attributes
@@ -83,7 +85,7 @@ function<Node> buildDOM(vNode VirtualNode, parentPath string, reporter DiffRepor
 		for child in children {
 			built := buildDOM(child, elementPath, reporter)
 			node.appendChild(built)
-			reporter?.NodeCreated(child, built)
+			(reporter?.NodeCreated)(child, built)
 		}
 	}
 
@@ -95,18 +97,18 @@ function<Node> buildDOM(vNode VirtualNode, parentPath string, reporter DiffRepor
  * is applied.
  */
 interface DiffReporter {
-	function<void> NodeRemoved(domNode Node)
+	function NodeRemoved(domNode Node)
 
-	function<void> NodeCreated(virtualNode VirtualNode, domNode Node)
+	function NodeCreated(virtualNode VirtualNode, domNode Node)
 
-	function<void> NodeUpdated(virtualNode VirtualNode, domNode Node)
+	function NodeUpdated(virtualNode VirtualNode, domNode Node)
 }
 
 /**
  * ComputeDiff computes the difference between the updated Virtual DOM tree and the existing
  * tree specified.
  */
-function<Diff> ComputeDiff(updated VirtualNode, existing DOMNode) {
+function ComputeDiff(updated VirtualNode, existing DOMNode) Diff {
 	return computeDiff(updated, existing, -1)
 }
 
@@ -114,10 +116,9 @@ function<Diff> ComputeDiff(updated VirtualNode, existing DOMNode) {
  * ApplyDiff applies the given diff to the given DOM node, optional reportinig to the specified
  * reporter.
  */
-function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
+function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 	switch diff.Type {
 		case DIFF_SAME:
-			// Do absolutely nothing, as it is the same exact virtual node.
 
 		case DIFF_THUNK:
 			// Update any attributes.
@@ -130,7 +131,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			}
 
 			// Report the update.
-			reporter?.NodeUpdated(diff.ReplacementNode!, domNode)
+			(reporter?.NodeUpdated)(diff.ReplacementNode!, domNode)
 
 			// Process child diffs.
 			for childDiff in diff.Children {
@@ -140,7 +141,9 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 				}
 
 				var child = domNode.(Element).childNodes[&childDiff.NodeIndex]
-				if child is null { reject DOMError.WithMessage('Missing expected child') }
+				if child is null {
+					reject DOMError.WithMessage('Missing expected child')
+				}
 
 				ApplyDiff(childDiff, child!, reporter)
 			}
@@ -149,7 +152,7 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			var parent = domNode.parentNode
 			if parent is not null {
 				parent.removeChild(domNode)
-				reporter?.NodeRemoved(domNode)
+				(reporter?.NodeRemoved)(domNode)
 			}
 
 		case DIFF_CREATE_NODE:
@@ -158,14 +161,14 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			var insertionBeforeIndex = diff.NodeIndex
 			if insertionBeforeIndex >= int(domNode.childNodes.length) {
 				domNode.appendChild(createdNode)
-				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
+				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
 				return
 			}
 
 			var existingChild = domNode.childNodes[&insertionBeforeIndex]
 			if existingChild is not null {
 				domNode.insertBefore(createdNode, existingChild)
-				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
+				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
 			}
 
 		case DIFF_REPLACE_NODE:
@@ -175,8 +178,8 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 				var createdNode = buildDOM(diff.ReplacementNode!, parentPath, reporter)
 				parent.replaceChild(createdNode, domNode)
 
-				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
-				reporter?.NodeRemoved(domNode)
+				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
+				(reporter?.NodeRemoved)(domNode)
 			}
 	}
 }
@@ -187,8 +190,8 @@ function<void> ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
  * is used. Otherwise, a key is inferred based on the tag name and the element's location
  * under its parent element.
  */
-function<string> getInferredNodeKey(node DOMNode, index int) {
-	if node.Key is not null { 
+function getInferredNodeKey(node DOMNode, index int) string {
+	if node.Key is not null {
 		return node.Key!
 	} else if node.IsElement {
 		return node.TagName + ':' + index.String()
@@ -197,7 +200,7 @@ function<string> getInferredNodeKey(node DOMNode, index int) {
 	}
 }
 
-function<Diff> computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) {
+function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int) Diff {
 	// Check if the existing node is literally the same as the updated node. If so, we just
 	// skip the diff entirely.
 	existingVirtual := existing.Virtual

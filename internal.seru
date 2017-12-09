@@ -1,14 +1,14 @@
 from webidl`@core` import String as DOMString
 from webidl`dom` import Node
 
-var<string> elementInternalPath = "__internal_dom_path"
+var elementInternalPath string = "__internal_dom_path"
 
-function<string> getDOMPath(node Node) {
+function getDOMPath(node Node) string {
 	var existingPath = node[&elementInternalPath]
 	if existingPath is null { return '(root)' }
 	return string(existingPath.(DOMString))
 }
 
-function<void> setDOMPath(node Node, elementPath string) {
+function setDOMPath(node Node, elementPath string) {
 	node[&elementInternalPath] = &elementPath
 }
