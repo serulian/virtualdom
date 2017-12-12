@@ -8,15 +8,15 @@ from internal import getDOMPath, setDOMPath
 from types import VirtualNode, FunctionReference
 from wrappers import DOMNode, DOMError, VirtualNodeWrapper, keyAttachment
 
-var DIFF_REPLACE_NODE string = 'replace-node'
+var diff_replace_node string = 'replace-node'
 
-var DIFF_REMOVE_NODE string = 'remove-node'
+var diff_remove_node string = 'remove-node'
 
-var DIFF_CREATE_NODE string = 'create-node'
+var diff_create_node string = 'create-node'
 
-var DIFF_SAME string = 'same-node'
+var diff_same string = 'same-node'
 
-var DIFF_THUNK string = 'thunk'
+var diff_thunk string = 'thunk'
 
 /**
  * AttributeDiff defines the difference of an attribute being added or removed.
@@ -118,9 +118,9 @@ function ComputeDiff(updated VirtualNode, existing DOMNode) Diff {
  */
 function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 	switch diff.Type {
-		case DIFF_SAME:
+		case diff_same:
 
-		case DIFF_THUNK:
+		case diff_thunk:
 			// Update any attributes.
 			for attrDiff in diff.Attributes {
 				if attrDiff.Value is null {
@@ -135,7 +135,7 @@ function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 
 			// Process child diffs.
 			for childDiff in diff.Children {
-				if childDiff.Type == DIFF_CREATE_NODE {
+				if childDiff.Type == diff_create_node {
 					ApplyDiff(childDiff, domNode, reporter)
 					continue
 				}
@@ -148,14 +148,14 @@ function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 				ApplyDiff(childDiff, child!, reporter)
 			}
 
-		case DIFF_REMOVE_NODE:
+		case diff_remove_node:
 			var parent = domNode.parentNode
 			if parent is not null {
 				parent.removeChild(domNode)
 				(reporter?.NodeRemoved)(domNode)
 			}
 
-		case DIFF_CREATE_NODE:
+		case diff_create_node:
 			var parentPath = getDOMPath(domNode)
 			var createdNode = buildDOM(diff.ReplacementNode!, parentPath, reporter)
 			var insertionBeforeIndex = diff.NodeIndex
@@ -171,7 +171,7 @@ function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
 			}
 
-		case DIFF_REPLACE_NODE:
+		case diff_replace_node:
 			var parent = domNode.parentNode
 			if parent is not null {
 				var parentPath = getDOMPath(domNode)
@@ -207,7 +207,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 	if existingVirtual is not null {
 		if existingVirtual == updatedNode {
 			return Diff{
-				Type: DIFF_SAME,
+				Type: diff_same,
 				NodeIndex: parentIndex,
 				ReplacementNode: updatedNode,
 				Children: []Diff{},
@@ -248,7 +248,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 	// wholesale.
 	if needsReplacement {
 		return Diff{
-			Type: DIFF_REPLACE_NODE,
+			Type: diff_replace_node,
 			NodeIndex: parentIndex,
 			ReplacementNode: updatedNode,
 			Children: []Diff{},
@@ -313,7 +313,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 		if vNode is null {
 			// No matching node. Remove this one.
 			childRemovalDiffs.Add(Diff{
-				Type: DIFF_REMOVE_NODE,
+				Type: diff_remove_node,
 				NodeIndex: index,
 				Children: []Diff{},
 				Attributes: []AttributeDiff{},
@@ -341,7 +341,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 
 			if addCreate {
 				childInsertionDiffs.Add(Diff{
-					Type: DIFF_CREATE_NODE,
+					Type: diff_create_node,
 					NodeIndex: index,
 					ReplacementNode: child,
 					Children: []Diff{},
@@ -354,7 +354,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 	var childrenDiffs = list<Diff>.Concat(list<Diff>.Concat(childInPlaceDiffs, childRemovalDiffs), childInsertionDiffs)
 
 	return Diff{
-		Type: DIFF_THUNK,
+		Type: diff_thunk,
 		NodeIndex: parentIndex,
 		Children: childrenDiffs[0:],
 		Attributes: attributeDiffs[0:],
