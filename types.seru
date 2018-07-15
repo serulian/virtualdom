@@ -4,6 +4,12 @@
 type FunctionReference : string {}
 
 /**
+ * SafeHTML is a block of HTML marked safe to be directly included. Note that no parsing or
+ * validation is done, so if bad HTML is included, it *can* cause XSS.
+ */
+type SafeHTML : string {}
+
+/**
  * VirtualNode defines a single virtual DOM node.
  */
 struct VirtualNode {
@@ -26,9 +32,15 @@ struct VirtualNode {
 	Key string?
 
 	/**
-	 * Text is the textual contents of the node, if any. If specified, TagName be null.
+	 * Text is the textual contents of the node, if any. If specified, TagName must be null.
 	 */
 	Text string?
+
+	/**
+	 * SafeHTMLContents, if specified, indicates the contents of this virtual node as a SafeHTML
+	 * block. Note if set the Children *must* be null.
+	 */
+	SafeHTMLContents SafeHTML?
 
 	/**
 	 * Children is the slice of children of this node, if any.

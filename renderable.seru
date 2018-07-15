@@ -1,7 +1,7 @@
 from @core import Map, List
 from @core import SimpleError, Stringable
 from eventmanager import EventManager
-from types import VirtualNode, FunctionReference
+from types import VirtualNode, FunctionReference, SafeHTML
 
 /**
  * RenderKeyed marks a renderable object with a comparison key for diff determination.
@@ -101,6 +101,9 @@ function RenderToVirtualNode(instance any, context Context) VirtualNode {
 				}
 
 				return typedValue
+
+			case SafeHTML:
+				return VirtualNode{SafeHTMLContents: typedValue, TagName: 'span'}
 
 			case renderableVirtualNode:
 				current = typedValue.renderUnderRoot(rootParent ?? typedValue, '', context)
@@ -223,6 +226,9 @@ class renderableVirtualNode {
 			match child as typedChild {
 				case string:
 					childList.Add(VirtualNode{Text: typedChild})
+
+				case SafeHTML:
+					childList.Add(VirtualNode{SafeHTMLContents: typedChild, TagName: 'span'})
 
 				case VirtualNode:
 					childList.Add(typedChild)
