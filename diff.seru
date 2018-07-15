@@ -5,7 +5,7 @@ from @core import Map, List, Set
 from webidl`dom` import Element, Node, document
 
 from internal import getDOMPath, setDOMPath
-from types import VirtualNode, FunctionReference
+from types import VirtualNode, FunctionReference, SafeHTML
 from wrappers import DOMNode, DOMError, VirtualNodeWrapper, keyAttachment
 
 var diff_replace_node string = 'replace-node'
@@ -39,8 +39,22 @@ struct Diff {
 	 * The index of this diff's starting node in the parent node.
 	 */
 	NodeIndex int
+
+	/**
+	 * ReplacementNode is the virtual node replacing or being added at
+	 * the current location of this diff. Will be null for nodes being
+	 * removed.
+	 */
 	ReplacementNode VirtualNode?
+
+	/**
+	 * Children are the diffs for the children of this node, if any.
+	 */
 	Children []Diff
+
+	/**
+	 * Attributes are the diffs of the attributes of this node, if any.
+	 */
 	Attributes []AttributeDiff
 }
 
@@ -56,6 +70,13 @@ function generateId() string {
  * given node.
  */
 function buildDOM(vNode VirtualNode, parentPath string, reporter DiffReporter?) Node {
+	contents := vNode.SafeHTMLContents
+	if contents is not null {
+		element := document.createElement('span')
+		element['innerHTML'] = &contents
+		return element
+	}
+
 	if vNode.TagName is null {
 		return document.createTextNode(&(vNode.Text!))
 	}
@@ -85,7 +106,7 @@ function buildDOM(vNode VirtualNode, parentPath string, reporter DiffReporter?) 
 		for child in children {
 			built := buildDOM(child, elementPath, reporter)
 			node.appendChild(built)
-			(reporter?.NodeCreated)(child, built)
+			reporter?.NodeCreated(child, built)
 		}
 	}
 
@@ -119,6 +140,8 @@ function ComputeDiff(updated VirtualNode, existing DOMNode) Diff {
 function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 	switch diff.Type {
 		case diff_same:
+			// Nothing to do
+			return
 
 		case diff_thunk:
 			// Update any attributes.
@@ -130,29 +153,40 @@ function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 				}
 			}
 
+			contents := diff.ReplacementNode?.SafeHTMLContents
+			if contents is not null {
+				element := domNode.(Element)
+				existingContents := string(element['innerHTML'].(DOMString))
+				if existingContents != string(contents) {
+					element['innerHTML'] = &contents
+				}
+			}
+
 			// Report the update.
-			(reporter?.NodeUpdated)(diff.ReplacementNode!, domNode)
+			reporter?.NodeUpdated(diff.ReplacementNode!, domNode)
 
 			// Process child diffs.
-			for childDiff in diff.Children {
-				if childDiff.Type == diff_create_node {
-					ApplyDiff(childDiff, domNode, reporter)
-					continue
-				}
+			if contents is null {
+				for childDiff in diff.Children {
+					if childDiff.Type == diff_create_node {
+						ApplyDiff(childDiff, domNode, reporter)
+						continue
+					}
 
-				var child = domNode.(Element).childNodes[&childDiff.NodeIndex]
-				if child is null {
-					reject DOMError.WithMessage('Missing expected child')
-				}
+					var child = domNode.(Element).childNodes[&childDiff.NodeIndex]
+					if child is null {
+						reject DOMError.WithMessage('Missing expected child')
+					}
 
-				ApplyDiff(childDiff, child!, reporter)
+					ApplyDiff(childDiff, child!, reporter)
+				}
 			}
 
 		case diff_remove_node:
 			var parent = domNode.parentNode
 			if parent is not null {
 				parent.removeChild(domNode)
-				(reporter?.NodeRemoved)(domNode)
+				reporter?.NodeRemoved(domNode)
 			}
 
 		case diff_create_node:
@@ -161,14 +195,14 @@ function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 			var insertionBeforeIndex = diff.NodeIndex
 			if insertionBeforeIndex >= int(domNode.childNodes.length) {
 				domNode.appendChild(createdNode)
-				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
+				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
 				return
 			}
 
 			var existingChild = domNode.childNodes[&insertionBeforeIndex]
 			if existingChild is not null {
 				domNode.insertBefore(createdNode, existingChild)
-				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
+				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
 			}
 
 		case diff_replace_node:
@@ -178,8 +212,8 @@ function ApplyDiff(diff Diff, domNode Node, reporter DiffReporter?) {
 				var createdNode = buildDOM(diff.ReplacementNode!, parentPath, reporter)
 				parent.replaceChild(createdNode, domNode)
 
-				(reporter?.NodeCreated)(diff.ReplacementNode!, createdNode)
-				(reporter?.NodeRemoved)(domNode)
+				reporter?.NodeCreated(diff.ReplacementNode!, createdNode)
+				reporter?.NodeRemoved(domNode)
 			}
 	}
 }
@@ -279,6 +313,17 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 			if existingValue is null || attributeValue! != existingValue! {
 				attributeDiffs.Add(AttributeDiff{Name: attributeName, Value: attributeValue})
 			}
+		}
+	}
+
+	// If there are contents of the node, then its children are simply replaced.
+	if updatedNode.SafeHTMLContents is not null {
+		return Diff{
+			Type: diff_thunk,
+			NodeIndex: parentIndex,
+			Children: []Diff{},
+			Attributes: attributeDiffs[0:],
+			ReplacementNode: updatedNode,
 		}
 	}
 

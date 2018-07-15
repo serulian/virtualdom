@@ -1,4 +1,5 @@
 from renderable import renderableVirtualNode
+from types import VirtualNode, SafeHTML
 
 function A(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'a', props: props, children: childStream}
@@ -62,4 +63,22 @@ function Li(props []{any}, childStream any*) renderableVirtualNode {
 
 function Input(props []{any}, childStream any*) renderableVirtualNode {
 	return renderableVirtualNode{tagName: 'input', props: props, children: childStream}
+}
+
+struct safeHTMLProps {
+	TagName string?
+}
+
+/**
+ * MarkSafe represents an element added to the DOM tree containing the given `rawHTML`,
+ * unescaped. If `TagName` is unspecified in `props`, then the HTML is wrapped in a span.
+ *
+ * NOTE: Be *very careful* with the HTML given here, as it will *not* be escaped or checked
+ * in *any* fashion.
+ */
+function MarkSafe(props safeHTMLProps, rawHTML string) VirtualNode {
+	return VirtualNode{
+		TagName: props.TagName ?? 'span',
+		SafeHTMLContents: SafeHTML(rawHTML),
+	}
 }
