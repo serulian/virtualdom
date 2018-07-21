@@ -10,6 +10,7 @@ interface Node {
 
 	readonly attribute Node? parentNode;
 	readonly attribute Node? firstChild;
+	readonly attribute Node? lastChild;
 	readonly attribute Node? nextSibling;
 
 	getter any (String propertyName);
@@ -59,6 +60,8 @@ interface HTMLDocument {
   attribute Element body;
   Element getElementById(String elementId);
   Array getElementsByTagName(String tagName);
+
+  Boolean hasFocus();
 };
 
 [Global]

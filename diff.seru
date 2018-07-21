@@ -4,7 +4,7 @@ from @core import Map, List, Set
 
 from webidl`dom` import Element, Node, document
 
-from internal import getDOMPath, setDOMPath
+from internal import getDOMPath, setDOMPath, fastStringMap
 from types import VirtualNode, FunctionReference, SafeHTML
 from wrappers import DOMNode, DOMError, VirtualNodeWrapper, keyAttachment
 
@@ -290,10 +290,12 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 		}
 	}
 
+	var hasChanges = false
+
 	// Perform diffing on the attributes of the nodes.
 	var attributeDiffs = list<AttributeDiff>.Empty()
 	if existing.IsElement {
-		var existingAttributes = Map<string, string?>.Empty()
+		var existingAttributes = fastStringMap<string?>.Empty()
 
 		for attributeName in existing.AttributeNames {
 			existingAttributes[attributeName] = existing.GetAttribute(attributeName)
@@ -312,6 +314,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 
 			if existingValue is null || attributeValue! != existingValue! {
 				attributeDiffs.Add(AttributeDiff{Name: attributeName, Value: attributeValue})
+				hasChanges = true
 			}
 		}
 	}
@@ -322,7 +325,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 			Type: diff_thunk,
 			NodeIndex: parentIndex,
 			Children: []Diff{},
-			Attributes: attributeDiffs[0:],
+			Attributes: attributeDiffs.Slice(),
 			ReplacementNode: updatedNode,
 		}
 	}
@@ -332,8 +335,8 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 	var childRemovalDiffs = list<Diff>.Empty()
 	var childInsertionDiffs = list<Diff>.Empty()
 
-	var updatedByKey = Map<string, VirtualNode>.Empty()
-	var keysHandled = Map<string, Diff>.Empty()
+	var updatedByKey = fastStringMap<VirtualNode>.Empty()
+	var keysHandled = fastStringMap<Diff>.Empty()
 
 	// Find the keys of the updated node, to determine if we are inserting nodes
 	// in amongst the existing children.
@@ -363,6 +366,7 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 				Children: []Diff{},
 				Attributes: []AttributeDiff{},
 			})
+			hasChanges = true
 			continue
 		}
 
@@ -382,6 +386,9 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 			if handledDiff is not null {
 				childInPlaceDiffs.Add(handledDiff)
 				addCreate = false
+				if handledDiff.Type != diff_same {
+					hasChanges = true
+				}
 			}
 
 			if addCreate {
@@ -392,7 +399,18 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 					Children: []Diff{},
 					Attributes: []AttributeDiff{},
 				})
+				hasChanges = true
 			}
+		}
+	}
+
+	if !hasChanges {
+		return Diff{
+			Type: diff_same,
+			NodeIndex: parentIndex,
+			ReplacementNode: updatedNode,
+			Children: []Diff{},
+			Attributes: []AttributeDiff{},
 		}
 	}
 
@@ -401,8 +419,8 @@ function computeDiff(updatedNode VirtualNode, existing DOMNode, parentIndex int)
 	return Diff{
 		Type: diff_thunk,
 		NodeIndex: parentIndex,
-		Children: childrenDiffs[0:],
-		Attributes: attributeDiffs[0:],
+		Children: childrenDiffs.Slice(),
+		Attributes: attributeDiffs.Slice(),
 		ReplacementNode: updatedNode,
 	}
 }

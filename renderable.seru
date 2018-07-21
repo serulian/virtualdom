@@ -1,6 +1,7 @@
 from @core import Map, List
 from @core import SimpleError, Stringable
 from eventmanager import EventManager
+from internal import fastStringMap
 from types import VirtualNode, FunctionReference, SafeHTML
 
 /**
@@ -170,10 +171,11 @@ class renderableVirtualNode {
 	}
 
 	function renderUnderRoot(root Renderable, pathUnderRoot string, context Context) VirtualNode {
-		var attributes = Map<string, string>.Empty()
-		var eventHandlers = Map<string, FunctionReference>.Empty()
+		var attributes = fastStringMap<string>.Empty()
+		var eventHandlers = fastStringMap<FunctionReference>.Empty()
 		var key string? = null
 		var nodeInsertedHandler FunctionReference? = null
+		var nodeUpdatedHandler FunctionReference? = null
 
 		props := this.props
 		children := this.children
@@ -188,6 +190,9 @@ class renderableVirtualNode {
 				if name == "ondomnodeinserted" {
 					fn := props[name].(function<void>(any))
 					nodeInsertedHandler = context.EventManager.RegisterFunction(fn)
+				} else if name == "ondomnodeupdated" {
+					fn := props[name].(function<void>(any))
+					nodeUpdatedHandler = context.EventManager.RegisterFunction(fn)
 				} else if name.HasPrefix("on") {
 					fn := props[name].(function<void>(any))
 					eventHandlers[name[2:]] = context.EventManager.RegisterFunction(fn)
@@ -262,6 +267,7 @@ class renderableVirtualNode {
 			Attributes: attributes.Mapping(),
 			Children: childList[0:],
 			DOMNodeInserted: nodeInsertedHandler,
+			DOMNodeUpdated: nodeUpdatedHandler,
 		}
 	}
 }

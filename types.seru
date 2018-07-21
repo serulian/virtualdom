@@ -57,4 +57,10 @@ struct VirtualNode {
 	 * created under the parent node.
 	 */
 	DOMNodeInserted FunctionReference?
+
+	/**
+	 * DOMNodeUpdated is a function invoked by the event manager if/when the node is
+	 * updated under the parent node.
+	 */
+	DOMNodeUpdated FunctionReference?
 }
