@@ -174,6 +174,7 @@ class renderableVirtualNode {
 		var eventHandlers = Map<string, FunctionReference>.Empty()
 		var key string? = null
 		var nodeInsertedHandler FunctionReference? = null
+		var nodeUpdatedHandler FunctionReference? = null
 
 		props := this.props
 		children := this.children
@@ -188,6 +189,9 @@ class renderableVirtualNode {
 				if name == "ondomnodeinserted" {
 					fn := props[name].(function<void>(any))
 					nodeInsertedHandler = context.EventManager.RegisterFunction(fn)
+				} else if name == "ondomnodeupdated" {
+					fn := props[name].(function<void>(any))
+					nodeUpdatedHandler = context.EventManager.RegisterFunction(fn)
 				} else if name.HasPrefix("on") {
 					fn := props[name].(function<void>(any))
 					eventHandlers[name[2:]] = context.EventManager.RegisterFunction(fn)
@@ -262,6 +266,7 @@ class renderableVirtualNode {
 			Attributes: attributes.Mapping(),
 			Children: childList[0:],
 			DOMNodeInserted: nodeInsertedHandler,
+			DOMNodeUpdated: nodeUpdatedHandler,
 		}
 	}
 }
