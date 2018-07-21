@@ -23,7 +23,7 @@ interface DOMNode {
 
 	property TextData string? { get }
 
-	property AttributeNames []string { get }
+	property AttributeNames string* { get }
 
 	property ChildCount int { get }
 
@@ -57,17 +57,16 @@ type NodeWrapper : Node {
 		return NodeWrapper(node)
 	}
 
-	property AttributeNames []string {
+	property AttributeNames string* {
 		get {
-			if !this.IsElement { return []string{} }
-
-			var attributes = Element(this).attributes
-			var names = list<string>.Empty()
-			for attr in slice<any>.ForArray(attributes) {
-				names.Add(string(attr->name.(DOMString)))
+			if !this.IsElement {
+				yield break
 			}
 
-			return names[0:]
+			var attributes = Element(this).attributes
+			for attr in slice<any>.ForArray(attributes) {
+				yield string(attr->name.(DOMString))
+			}
 		}
 	}
 
@@ -135,14 +134,9 @@ type VirtualNodeWrapper : VirtualNode {
 		get { return VirtualNode(this).Key }
 	}
 
-	property AttributeNames []string {
+	property AttributeNames string* {
 		get {
-			attrs := VirtualNode(this).Attributes
-			if attrs is null {
-				return []string{}
-			} else {
-				return slice<string>.From(attrs.Keys)
-			}
+			return VirtualNode(this).Attributes?.Keys ?? []string{}.Stream()
 		}
 	}
 
@@ -183,11 +177,6 @@ type VirtualNodeWrapper : VirtualNode {
 			reject DOMError{message: 'Cannot retrieve attribute for non-element'}
 		}
 
-		attributes := VirtualNode(this).Attributes
-		if attributes is not null {
-			return attributes[name]
-		} else {
-			return null
-		}
+		return (VirtualNode(this).Attributes ?? []{string}{})[name]
 	}
 }

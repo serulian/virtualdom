@@ -1,4 +1,4 @@
-from webidl`@core` import String as DOMString
+from webidl`@core` import String as DOMString, Object
 from webidl`dom` import Node
 
 var elementInternalPath string = "__internal_dom_path"
@@ -11,4 +11,25 @@ function getDOMPath(node Node) string {
 
 function setDOMPath(node Node, elementPath string) {
 	node[&elementInternalPath] = &elementPath
+}
+
+type fastStringMap<T> : Object {
+	constructor Empty() {
+		return fastStringMap<T>(Object.new())
+	}
+
+	operator Index(key string) T? {
+		var value = Object(this)[&key]
+		if value is null { return null }
+		return value.(T)
+	}
+
+	operator SetIndex(key string, value T) {
+		obj := Object(this)
+		obj[&key] = value
+	}
+
+	function Mapping() []{T} {
+		return mapping<T>(&this)
+	}
 }
