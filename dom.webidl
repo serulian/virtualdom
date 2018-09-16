@@ -20,6 +20,7 @@ interface Node {
 interface Event {
   readonly attribute String type;
   readonly attribute Element? target;
+  readonly attribute Element? srcElement;
 
   getter String (String propertyName);
 };
