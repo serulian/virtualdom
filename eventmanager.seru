@@ -84,17 +84,18 @@ class EventManager {
 	}
 
 	function handleEvent(evt Event) {
-		var target = evt.target
-		if target is null { return }
+		var srcElement = evt.srcElement
+		if srcElement is null { return }
 
-		// Find the entry in the tree for the target's path.
-		var path = getDOMPath(target!)
+		// Find the entry in the tree for the srcElement's path.
+		var path = getDOMPath(srcElement!)
 		var split = path.Split('.')
-		var treeEntry = this.tree.getBranch(split)
-		if treeEntry is null { return }
 
-		var handler = (treeEntry!).lookupHandler(string(evt[&'type']))
-		if handler is not null {
+		eventName := string(evt[&'type'])
+		handlers := this.tree.getHandlers(split, eventName)
+		if handlers.IsEmpty { return }
+
+		for handler in handlers {
 			this.invokeHandler(handler, evt)
 		}
 	}
@@ -156,6 +157,30 @@ class eventTree {
 		if child is null { return null }
 
 		return (child!).getBranch(parts[1:])
+	}
+
+	/**
+	 * getHandlers returns all handlers for the specified `eventName` on the element
+	 * starting at `parts` and working upward the DOM tree.
+	 */
+	function getHandlers(parts []string, eventName string) []FunctionReference {
+		var handlers = []FunctionReference{}
+		var branch = this
+		for index in 0 .. parts.Length {
+			currentHandler := branch.handlers[eventName]
+			if currentHandler is not null {
+				handlers = [currentHandler] + handlers
+			}
+
+			nextBranch := branch.children[parts[index]] if index < parts.Length else null
+			if nextBranch is null {
+				return handlers
+			} else {
+				branch = nextBranch
+			}
+		}
+
+		return handlers
 	}
 
 	function clearHandlers() {

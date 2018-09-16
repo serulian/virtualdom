@@ -74,6 +74,7 @@ function buildDOM(vNode VirtualNode, parentPath string, reporter DiffReporter?) 
 	if contents is not null {
 		element := document.createElement('span')
 		element['innerHTML'] = &contents
+		setDOMPath(element, parentPath + '.' + generateId())
 		return element
 	}
 
