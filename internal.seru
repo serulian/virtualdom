@@ -32,4 +32,9 @@ type fastStringMap<T> : Object {
 	function Mapping() []{T} {
 		return mapping<T>(&this)
 	}
+
+	function RemoveKey(key string) {
+		obj := Object(this)
+		obj[&key] = null
+	}
 }

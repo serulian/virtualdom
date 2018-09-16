@@ -4,7 +4,7 @@ from @core import Map, List, Set
 
 from webidl`dom` import Element, Node, Event
 
-from internal import getDOMPath
+from internal import getDOMPath, fastStringMap
 from types import VirtualNode, FunctionReference
 from wrappers import NodeWrapper
 
@@ -16,7 +16,7 @@ class EventManager {
 	var element Element
 	var registered Set<string> = Set<string>.Empty()
 	var functionRefCounter int = 0
-	var handlers Map<string, function<void>(any)> = Map<string, function<void>(any)>.Empty()
+	var handlers fastStringMap<function<void>(any)> = fastStringMap<function<void>(any)>.Empty()
 	var tree eventTree = eventTree.new()
 
 	/**
@@ -119,8 +119,8 @@ class EventManager {
  * eventTree represents a single level of an event tree for propagation of events.
  */
 class eventTree {
-	var children Map<string, eventTree> = Map<string, eventTree>.Empty()
-	var handlers Map<string, FunctionReference> = Map<string, FunctionReference>.Empty()
+	var children fastStringMap<eventTree> = fastStringMap<eventTree>.Empty()
+	var handlers fastStringMap<FunctionReference> = fastStringMap<FunctionReference>.Empty()
 
 	function removeBranch(parts []string) {
 		if parts.Length == 1 {
@@ -159,7 +159,7 @@ class eventTree {
 	}
 
 	function clearHandlers() {
-		this.handlers = Map<string, FunctionReference>.Empty()
+		this.handlers = fastStringMap<FunctionReference>.Empty()
 	}
 
 	function addHandler(eventName string, funcRef FunctionReference) {
