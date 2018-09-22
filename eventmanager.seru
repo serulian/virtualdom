@@ -60,6 +60,11 @@ class EventManager {
 	}
 
 	function NodeUpdated(virtualNode VirtualNode, domNode Node) {
+		updatedCallback := virtualNode.DOMNodeUpdated
+		if updatedCallback is not null {
+			this.invokeHandler(updatedCallback, domNode)
+		}
+
 		var path = getDOMPath(domNode)
 		var split = path.Split('.')
 		var treeEntry = this.tree.getOrAddBranch(split)
